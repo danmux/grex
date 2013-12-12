@@ -107,6 +107,70 @@ http://s3.amazonaws.com/doc/s3-developer-guide/OverviewDesignPrinciple.html
 
 
 
+Some performance observations
+-----------------------------
+
+10 user accounts each with a list of 20,000 records like this...
+	
+	x1 := Xact{
+		Description: "My very first description",
+		Other:       "My other description",
+		Amount:      1245,
+		Date:        time.Now(),
+	}
+
+Each file is uncompressed takes up 1.4M meaning that each record (row) takes up about 70 bytes
+
+
+Three nodes on one mac book pro computer wiht SSD all replicating - into different root folders.
+
+
+One node generates the transactions and then within a loop encodes the list into a gob and saves them to all three nodes
+
+it was able to loop at 4.2 loops per second....
+
+4.2 * 10 * 20,000 = 840,000 records per second
+
+replicated 3 times
+4.2 * 10 * 1.4M * 3 = 176Mbps -> which is pretty typical of the SSD macbook 
+
+
+Attempting to increase the loop has no effect on tese numbers - it maxes out at 4.2 per second.
+
+The rpc connection pond (pool) only ever sees upto 8 out of the 20 availble connections per node being made - so its safe to assume that the local loopback is transferring data quicker than the disk can write it, which although obvious, also confirms that the overhead in encoding and calling the rpc's is not the bottleneck.
+
+Having said that when the disk persistance is turned off the the loop only runs a little bit quicker
+
+So I pre allocated the buffer being passed to the encoder - but that made little difference so...
+
+After compiling with pprof I got this...
+
+(pprof) top10 -cum
+Total: 299 samples
+     165  55.2%  55.2%      276  92.3% time.Parse
+       0   0.0%  55.2%      261  87.3% runtime.(*errorString).Error
+       4   1.3%  56.5%       64  21.4% reflect.Value.Interface
+       5   1.7%  58.2%       61  20.4% reflect.valueInterface
+       0   0.0%  58.2%       47  15.7% strconv.Unquote
+      11   3.7%  61.9%       43  14.4% strconv.IsPrint
+       0   0.0%  61.9%       37  12.4% time.(*Time).GobEncode
+       7   2.3%  64.2%       37  12.4% time.Time.GobEncode
+       0   0.0%  64.2%       30  10.0% runtime.gc
+      13   4.3%  68.6%       23   7.7% runtime.FixAlloc_Free
+(pprof)
+
+Which shows that a lot of time was spent parsing time
+
+Then after removing the time type from the record the loop went up to 10 persecond with the profiler showing most of the time taken up encoding unicode - I stopped optimising then.
+
+My gut instinct is that gob encoding can be made quicker with specifc (unsafe) methods for each known type - especially if you are rpc-ing between homogeneous nodes 
+
+
+
+
+
+
+
 
 
 
