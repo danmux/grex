@@ -145,19 +145,19 @@ So I pre allocated the buffer being passed to the encoder - but that made little
 
 After compiling with pprof I got this...
 
-(pprof) top10 -cum
-Total: 299 samples
-     165  55.2%  55.2%      276  92.3% time.Parse
-       0   0.0%  55.2%      261  87.3% runtime.(*errorString).Error
-       4   1.3%  56.5%       64  21.4% reflect.Value.Interface
-       5   1.7%  58.2%       61  20.4% reflect.valueInterface
-       0   0.0%  58.2%       47  15.7% strconv.Unquote
-      11   3.7%  61.9%       43  14.4% strconv.IsPrint
-       0   0.0%  61.9%       37  12.4% time.(*Time).GobEncode
-       7   2.3%  64.2%       37  12.4% time.Time.GobEncode
-       0   0.0%  64.2%       30  10.0% runtime.gc
-      13   4.3%  68.6%       23   7.7% runtime.FixAlloc_Free
-(pprof)
+	(pprof) top10 -cum
+	Total: 299 samples
+	     165  55.2%  55.2%      276  92.3% time.Parse
+	       0   0.0%  55.2%      261  87.3% runtime.(*errorString).Error
+	       4   1.3%  56.5%       64  21.4% reflect.Value.Interface
+	       5   1.7%  58.2%       61  20.4% reflect.valueInterface
+	       0   0.0%  58.2%       47  15.7% strconv.Unquote
+	      11   3.7%  61.9%       43  14.4% strconv.IsPrint
+	       0   0.0%  61.9%       37  12.4% time.(*Time).GobEncode
+	       7   2.3%  64.2%       37  12.4% time.Time.GobEncode
+	       0   0.0%  64.2%       30  10.0% runtime.gc
+	      13   4.3%  68.6%       23   7.7% runtime.FixAlloc_Free
+	(pprof)
 
 Which shows that a lot of time was spent parsing time
 
