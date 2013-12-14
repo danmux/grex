@@ -1,5 +1,6 @@
-// pond - the connection pool manager
 package app
+
+// pond - the connection pool manager
 
 import (
 	"errors"
@@ -26,37 +27,39 @@ func (b *pond) init(poolSize int) {
 }
 
 func (b *pond) getConnection(connectString string) (*connection, error) {
+	// lock this so we dont have any chance of two processes attempting to use the same connection
 	b.mu.Lock()
+
+	// our pools are per url (connection string)
 	conList, in := b.ConnPool[connectString]
 	if !in {
 		log.Println("adding new pool for > " + connectString + " to the pool map")
 		conList = make([]*connection, b.PoolSize)
 		b.ConnPool[connectString] = conList
-	} else {
-		log.Println("got existing pool for > " + connectString)
 	}
 
+	// pipe is our wrapper the the tcp connection
 	var pipe *connection
 	var err error
-	var client *rpc.Client
+	var client *rpc.Client // defined here so we can keep err in this scope
 
 	for i, con := range conList {
+		// healthy existing connection
 		if con != nil && !con.IsBad {
 			if !con.InUse {
-				log.Printf("found free connection %d\n", i)
 				pipe = con
 				pipe.InUse = true
 				break
 			}
 		} else {
-			if con.IsBad {
+			// the connection must have been marked as bad from a previous failure - so close it
+			if con != nil {
 				con.Client.Close()
 			}
-
-			log.Printf("creating a new connection %d\n", i)
+			// now we can dial this connection, or redial if it was an existing bad connection
 			client, err = rpc.DialHTTP("tcp", connectString)
 			if err == nil {
-				log.Println("good new connection")
+				// make one of our little connection wrappers 
 				pipe = &connection{
 					client,
 					true,
@@ -66,6 +69,7 @@ func (b *pond) getConnection(connectString string) (*connection, error) {
 				break
 			} else {
 				err = errors.New("connection failed to: " + connectString)
+				markNodeUpOrDown(connectString, false)
 				break
 			}
 		}
@@ -78,14 +82,7 @@ func (b *pond) getConnection(connectString string) (*connection, error) {
 	return pipe, err
 }
 
-var connectionPond pond
-
 // Get a latent connection from from the pond or create a new one and add it to the pond
 func GetConnection(connectString string) (*connection, error) {
 	return connectionPond.getConnection(connectString)
-}
-
-// Set up the connection pond with the given size per url
-func InitPond(size int) {
-	connectionPond.init(size)
 }

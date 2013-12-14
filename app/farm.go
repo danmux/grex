@@ -1,5 +1,6 @@
-// farm - is the node management data functions
 package app
+
+// farm - is the node management data and functions
 
 import (
 	"errors"
@@ -29,10 +30,15 @@ type nodeLookup []NodeStatus
 // node string uri (which will almost certainly be a url as well) to nodeIndex lookup
 type nodeNameMap map[string]nodeIndex
 
-// for a particular flock
+// for a particular flock what does the Node (givien by the node index) care
 type FlockStatus struct {
-	Node   nodeIndex // so our nodemap does not contain strings - just integer references to the nodeLookup
+	// an index into nodeLookup so our nodemap does not contain strings - just integer references space++
+	Node nodeIndex
+	// does the Node want to herd this flock
 	Herder bool
+	// is if herding - if this is false and Herder is true, then the Node has not got a copy of the flock data yet
+	Herding bool
+	// does the Node have the data in cache
 	Cached bool
 }
 
@@ -49,8 +55,6 @@ type nodeMap struct {
 	Farm map[string]nodeList
 }
 
-var farm nodeMap
-
 // return the uri for this node
 func Farm() *nodeMap {
 	return &farm
@@ -61,33 +65,34 @@ func MyUri() string {
 	return farm.MyUri
 }
 
-// set up the farm 
-func InitFarm(uri string) {
-
-	farm = nodeMap{}
-	farm.MyUri = uri
-
-	farm.NodeUris = make(nodeLookup, 0, 10)
-	farm.NodeIds = make(nodeNameMap)
-	farm.Farm = make(map[string]nodeList)
-
-	// add me to the Lookups and map
-	AddNode(uri)
+// this is the flock key algorithm - default simply the first two characters of the bucket key
+func getFlockKey(bucketKey string) string {
+	return bucketKey[0:2]
 }
 
-func StartServing(bleetAddy string, restAddy string, seedUrls []string) {
-
-	go StartBleeting(bleetAddy)
-
-	// try the seed uris for lists of nodes
-	for _, s := range seedUrls {
-		err := tellNodes(s)
-		if err != nil {
-			log.Println(err)
+// for a given bucket return whether the current node is herding it and a list of other node urls that are herding it as well
+// flag to rule out those that are not actually fully herding yet
+func getHerdersForBucket(bucketKey string, allowPartialHerding bool) (bool, []string) {
+	flockKey := getFlockKey(bucketKey)
+	iCare := false
+	herders := make([]string, 0, MAX_REPLICAS)
+	for _, fs := range farm.Farm[flockKey] {
+		if fs.Node == 0 {
+			iCare = fs.Herding || (allowPartialHerding && fs.Herder)
+		} else if fs.Herder {
+			if allowPartialHerding || fs.Herding {
+				nodeStatus, err := LookupNode(fs.Node)
+				if err != nil {
+					log.Println("Error - inconsistant farm")
+				} else if !nodeStatus.Up {
+					log.Println("Warning - wanted to send stuff to a downed node")
+				} else {
+					herders = append(herders, nodeStatus.Url)
+				}
+			}
 		}
 	}
-
-	StartRestServer(restAddy)
+	return iCare, herders
 }
 
 // Register that a Node with given uri is herding / or not a particular flock 
@@ -173,5 +178,13 @@ func addExternalNodes(newNodes *NodeList) {
 				tellFarm(f.Url)
 			}
 		}
+	}
+}
+
+// report a node as down when we cant get a connection to it
+func markNodeUpOrDown(url string, upOrDown bool) {
+	index, in := farm.NodeIds[url]
+	if in {
+		farm.NodeUris[index].Up = upOrDown
 	}
 }

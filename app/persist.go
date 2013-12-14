@@ -1,5 +1,6 @@
-//persist - write something to persistant storage
 package app
+
+//persist - write something to persistant storage
 
 import (
 	"io/ioutil"
@@ -7,43 +8,66 @@ import (
 	"os"
 )
 
-func getRootPath(request *BlobArg) string {
-	return request.Key[:2] + "/" + request.Key
+func getRootPath(blob *BlobArg) string {
+	return dataRoot + getFlockKey(blob.Key) + "/" + blob.Key
 }
 
-func getPath(request *BlobArg) string {
-	return getRootPath(request) + "/" + request.SubKey + ".gob"
+func getPath(blob *BlobArg) string {
+	return getRootPath(blob) + "/" + blob.SubKey + ".gob"
 }
 
-func GetData(request *BlobArg, response *BlobArg) error {
+// read in data from the file system
+func getData(blob *BlobArg) error {
 
-	log.Println("GET " + getPath(request))
-	n, err := ioutil.ReadFile(getPath(request))
+	log.Println("reading local file: " + getPath(blob))
+	n, err := ioutil.ReadFile(getPath(blob))
 	if err != nil {
 		return err
 	}
-	response.Message = "good"
-	response.Payload = n
-	response.Key = request.Key
-	response.SubKey = request.SubKey
+	blob.Message = "good"
+	blob.Payload = n
 
 	log.Println("GET-done")
 	return nil
 }
 
-func PostData(request *BlobArg, response *BlobArg) error {
+// write data to the file system
+func putDataIncVersion(blob *BlobArg) error {
+	bv := getBucketVersion(blob.Key)
+	err := putData(blob)
+	if err == nil {
+		bv.incVersion(blob.SubKey)
+		putBucketVersion(bv)
+	}
+	return err
+}
 
-	log.Println("write " + getPath(request))
-	os.MkdirAll(getRootPath(request), 0750)
-	err := ioutil.WriteFile(getPath(request), request.Payload, 0640)
+func putData(blob *BlobArg) error {
+
+	log.Println("writing local file " + getPath(blob))
+
+	os.MkdirAll(getRootPath(blob), 0750)
+	err := ioutil.WriteFile(getPath(blob), blob.Payload, 0640)
 	if err != nil {
+		blob.Message = "failed - " + err.Error()
 		return err
 	}
 
-	// no payload for this response
-	response.Message = "good"
-	response.Key = request.Key
-	response.SubKey = request.SubKey
+	blob.Message = "good"
 
+	return nil
+}
+
+func deleteData(blob *BlobArg) error {
+
+	log.Println("removing local file " + getPath(blob))
+
+	err := os.Remove(getPath(blob))
+	if err != nil {
+		blob.Message = "failed to remove file - " + err.Error()
+		return err
+	}
+
+	blob.Message = "good"
 	return nil
 }

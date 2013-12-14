@@ -1,7 +1,7 @@
 Grex
 ====
 
-Grex - a flock of storage - and application server cluster - sharded and redundant - with apllication objec cache coordination
+Grex - a flock of storage - and application server cluster - sharded and redundant - with apllication object cache coordination
 
 Why
 ---
@@ -68,11 +68,32 @@ The bucket key will be the customer reference, and the item sub key would be the
   "johndoe", "favourites"
 
 
-
 Design
 ------
+** consistancy....
 
-There are 
+Lamport timestamps
+
+Vector clocks too complex and an uneccessary overhead for the app server scenario, given a couple of assumptions...
+
+A big difference between an app server and a general backend store is that we dont need vector clocks or similar conflict resolution in an app server because each request is statefull in that it has a session - linked to a specific bucket. So we can decide in the app layer that only one client can iniitiate changes to a bucket - if a client request causes a sequence of bucket updates on the server these could be synchronised within the cluster with vector clocks, or we can simply acquire a replication lock on the bucket for the duration of the server task.
+
+In our case changes to a bucket are generally going to be via human input, or via a batch job - the human input can be controlled as above, and the batch jobs can aquire a lock when there is no bucket session.
+
+Of course we could allow more than one session per bucket and the server can then deal with the vecor clocks.
+
+Eventual consistancy
+--------------------
+As writes to a particular replicated bucket can be sunchronised we dont need to care to muc about temporal conflicts.
+
+We deal with consistancy mainly in the case of node failure - by keeping a tiny bit of meta data for the bucket - recording the cluster version of each file - 
+
+WE have borrowed heavily from Riak ...
+How is divergence addressed? When you make a read request, Riak looks up all replicas for that object. By default, Riak will return the most updated version, determined by looking at the object's vector clock. Vector clocks are metadata attached to each replica when it is created. They are extended each time a replica is updated to keep track of versions. You can also allow clients to resolve conflicts themselves.
+
+Read Repair
+Further, when an outdated replica is returned as part of a read request, Riak will automatically update the out-of-sync replica to make it consistent. Read repair, a self-healing property of the database, will even update a replica that returns a “not_found” in the event that a node loses it due to physical failure.
+
 
 
 
@@ -92,6 +113,9 @@ New job
 
 Influence
 ---------
+The primary influence for Grex was Riak - 
+http://basho.com/riak/
+
 
 Are networks now faster than disks? - 
 http://serverfault.com/questions/238417/are-networks-now-faster-than-disks

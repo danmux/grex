@@ -1,5 +1,6 @@
-//bleet - interprocess communication 
 package app
+
+//bleet - interprocess communication 
 
 import (
 	"log"
@@ -12,11 +13,30 @@ import (
 type Bleets struct{}
 
 func (t *Bleets) GetBlob(request *BlobArg, response *BlobArg) error {
-	return GetData(request, response)
+	response.Key = request.Key
+	response.SubKey = request.SubKey
+	err := getData(response)
+	return err
 }
 
-func (t *Bleets) PostBlob(request *BlobArg, response *BlobArg) error {
-	return PostData(request, response)
+func (t *Bleets) PutBlob(request *BlobArg, response *BlobArg) error {
+	err := putDataIncVersion(request)
+	response.Key = request.Key
+	response.SubKey = request.SubKey
+	response.Message = request.Message
+	return err
+}
+
+type Key struct {
+	BucketKey string
+	ItemKey   string
+}
+
+func (t *Bleets) GetVersion(item *Key, response *uint64) error {
+
+	bv := getBucketVersion(item.BucketKey)
+	*response = bv.getVersion(item.ItemKey)
+	return nil
 }
 
 type SingleNodeFarm struct {
@@ -55,12 +75,14 @@ func (t *Bleets) GetNodes(request string, response *NodeList) error {
 	if err != nil {
 		return err
 	} else if isNew {
-		println("NOt GOT THIS                       --- " + request)
 		err := tellNodes(request)
 		if err != nil {
 			return err
 		}
 		return tellFarm(request)
+	} else {
+		// we have it so lets make sure we know its up
+		markNodeUpOrDown(request, true)
 	}
 
 	return nil
@@ -95,9 +117,9 @@ func tellFarm(url string) error {
 		conn.IsBad = true
 		return err
 	}
-	// add this to our farm
-	log.Println("got a good farm response from : " + url)
 
+	log.Println("got a good farm response from : " + url)
+	// add this to our farm
 	addExternalFarm(url, &reply)
 
 	return nil
@@ -120,11 +142,33 @@ func tellNodes(url string) error {
 		conn.IsBad = true
 		return err
 	}
-	// add this to our farm
-	log.Println("got a good GetNodes response from : " + url)
 
+	log.Println("got a good GetNodes response from : " + url)
 	// add these external nodes - if the node is new a tellFarm will be triggered on the node as well 
 	addExternalNodes(&reply)
 
 	return nil
+}
+
+func tellVersion(url string, bucketKey string, itemKey string) (uint64, error) {
+	conn, err := GetConnection(url)
+	if err != nil {
+		return 0, err
+	}
+
+	key := &Key{
+		BucketKey: bucketKey,
+		ItemKey:   itemKey,
+	}
+
+	var reply uint64
+
+	err = conn.Client.Call("Bleets.GetVersion", key, &reply)
+	conn.InUse = false
+
+	if err != nil {
+		conn.IsBad = true
+		return 0, err
+	}
+	return reply, nil
 }
