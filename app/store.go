@@ -102,7 +102,7 @@ func GetBytes(key string, itemKey string) (*BlobArg, error) {
 
 		// first check local version if it is less than the max remote versions 
 		// then get dont get this now - and set the should repair flag - so we persist the latest version locally
-		bv := getBucketVersion(key)
+		bv = getBucketVersion(key)
 		myVer := bv.getVersion(itemKey)
 
 		if myVer < maxRemoteVersion {
@@ -240,12 +240,16 @@ func PostBytes(key string, itemKey string, data *([]byte)) (string, error) {
 
 	if errorCount > 0 {
 		resp = "warning"
+		maxErrors := len(othersHerding)
+		if imHerding {
+			maxErrors++
+		}
 
 		if errorCount == len(othersHerding)+1 {
 			return "critical", errors.New("NO nodes persisted the data")
 		}
 		if errorCount == len(othersHerding) {
-			return "error", errors.New("Only the local node persisted the blob")
+			return "error", errors.New("Only one node persisted the blob")
 		}
 	}
 

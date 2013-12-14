@@ -133,14 +133,16 @@ func getBucketVersion(bucketKey string) *bucketVersion {
 		// load it from disk
 		log.Println("Debug - Loading version meta from disk - " + bucketKey)
 		err := dePersistBucketVersion(&bv)
-		// and put it in the cache
-		bucketItemVCache.Set(bv.bucketKey, bv.itemVersions)
 
-		if err != nil {
+		if err != nil || bv.itemVersions == nil {
 			log.Println("Error - Corrupt version vile " + bucketKey + " so resetting version file")
-			log.Println(err)
+			if err != nil {
+				log.Println(err)
+			}
 			bv.itemVersions = make(map[string]uint64)
 		}
+		// and put it in the cache
+		bucketItemVCache.Set(bv.bucketKey, bv.itemVersions)
 	}
 
 	return &bv
