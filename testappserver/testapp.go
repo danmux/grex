@@ -7,7 +7,7 @@ import (
 	"log"
 	"net/http"
 	"strconv"
-	// "time"
+	"time"
 )
 
 type Xact struct {
@@ -19,20 +19,45 @@ type Xact struct {
 
 type XactList []Xact
 
-func PostXactList(key string, subkey string, e *XactList) (string, error) {
+type AccountXacts struct {
+	Name  string
+	Xacts XactList
+}
+
+func (ax AccountXacts) Size() int {
+	return len(ax.Xacts)
+}
+
+func PostXactList(key string, itemKey string, e *XactList) (string, error) {
+	app.PutItemInCache(key, itemKey, AccountXacts{"shi", *e})
 	enc, m := app.GetBufferEncoder()
 	enc.Encode(*e)
 	data := m.Bytes()
-	return app.PostBytes(key, subkey, &data)
+	return app.PostBytes(key, itemKey, &data)
 }
 
-func GetXactList(key string, subkey string, e *XactList) error {
+func GetXactList(key string, itemKey string, e *AccountXacts) error {
 
-	dec, err := app.GetLoadedDecoder(key, subkey)
+	val, in := app.GetItemFromCache(key, itemKey)
+	if in {
+		log.Println("Yay cache hit")
+		xacts := val.(AccountXacts)
+		e.Xacts = xacts.Xacts
+		return nil
+	}
+
+	dec, err := app.GetLoadedDecoder(key, itemKey)
 	if err != nil {
 		return err
 	}
-	return dec.Decode(e)
+
+	err = dec.Decode(&(e.Xacts))
+
+	if err == nil {
+		log.Println("Putting it in cache")
+		app.PutItemInCache(key, itemKey, *e)
+	}
+	return err
 }
 
 func makeSomeXacts() *XactList {
@@ -77,21 +102,21 @@ func saveSomeXacts(thing *XactList) {
 
 func getXacts(w *rest.ResponseWriter, req *rest.Request) {
 	key := req.PathParam("key")
-	subkey := req.PathParam("subkey")
+	itemKey := req.PathParam("itemKey")
 
-	xacts := make(XactList, 0)
-	err := GetXactList(key, subkey, &xacts)
+	xacts := AccountXacts{}
+	err := GetXactList(key, itemKey, &xacts)
 	if err != nil {
 		rest.Error(w, err.Error(), 500)
 	} else {
-		w.WriteJson(xacts)
+		w.WriteJson(xacts.Xacts)
 	}
 }
 
 func postXacts(w *rest.ResponseWriter, req *rest.Request) {
 	log.Println("got a post")
 	key := req.PathParam("key")
-	subkey := req.PathParam("subkey")
+	itemKey := req.PathParam("itemKey")
 
 	xacts := make(XactList, 0)
 	err := req.DecodeJsonPayload(&xacts)
@@ -100,7 +125,7 @@ func postXacts(w *rest.ResponseWriter, req *rest.Request) {
 		return
 	}
 
-	stat, err := PostXactList(key, subkey, &xacts)
+	stat, err := PostXactList(key, itemKey, &xacts)
 	if err != nil {
 		rest.Error(w, err.Error(), http.StatusInternalServerError)
 	} else {
@@ -114,8 +139,8 @@ func postXacts(w *rest.ResponseWriter, req *rest.Request) {
 func StartAppServer(listen string) {
 	handler := rest.ResourceHandler{}
 	handler.SetRoutes(
-		rest.Route{"GET", "/xacts/:key/:subkey", getXacts},
-		rest.Route{"POST", "/xacts/:key/:subkey", postXacts},
+		rest.Route{"GET", "/xacts/:key/:itemKey", getXacts},
+		rest.Route{"POST", "/xacts/:key/:itemKey", postXacts},
 	)
 	http.ListenAndServe(listen, &handler)
 	log.Println("App server started: ", listen)
@@ -165,22 +190,28 @@ func main() {
 	// if *flgPort == "8029" {
 
 	// 	ticker := time.NewTicker(2000 * time.Millisecond)
-	// 	thingy := makeSomeXacts()
+	// 	// thingy := makeSomeXacts()
 	// 	loops := 0
 	// 	go func() {
 
 	// 		select {
 	// 		case <-ticker.C:
 	// 			loops = 0
-	// 			// for loops < 50 {
-	// 			log.Println("timer")
+	// 			for loops < 50 {
+	// 				log.Println("timer")
 
-	// 			saveSomeXacts(thingy)
-	// 			loops++
+	// 				// saveSomeXacts(thingy)
 
-	// 			println(loops)
+	// 				xacts := AccountXacts{}
+	// 				GetXactList("kanmull", "poopoo", &xacts)
 
-	// 			// }
+	// 				println(xacts.Size())
+
+	// 				loops++
+
+	// 				println(loops)
+
+	// 			}
 	// 		}
 	// 	}()
 

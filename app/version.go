@@ -48,8 +48,8 @@ func (b *bucketVersion) setVersion(itemKey string, ver uint64) {
 // versions stored in single file per bucket - each bucket has an item hash with version numbers
 var bucketItemVCache *cache.LRUCache // the lru of bucket versions
 
-func initialiseVersionCache(size uint64) {
-	bucketItemVCache = cache.NewLRUCache(size) // 1MB cach enough for 15 pages? - TODO get from config
+func initialiseVersionCache(size int64) {
+	bucketItemVCache = cache.NewLRUCache(size)
 }
 
 func clearVersionCache() {

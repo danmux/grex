@@ -44,6 +44,9 @@ func putDataIncVersion(blob *BlobArg) error {
 
 func putData(blob *BlobArg) error {
 
+	// invalidate this in the data cache
+	invalidateItemInCache(blob.Key, blob.SubKey)
+
 	log.Println("writing local file " + getPath(blob))
 
 	os.MkdirAll(getRootPath(blob), 0750)
