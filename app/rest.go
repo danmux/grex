@@ -14,13 +14,12 @@ func getFarm(w *rest.ResponseWriter, req *rest.Request) {
 	farm := Farm()
 	w.WriteJson(farm)
 }
+
 func getMeta(w *rest.ResponseWriter, req *rest.Request) {
 	key := req.PathParam("blobkey")
 	log.Println(key)
 	bv := getBucketVersion(key)
 	log.Println(bv)
-
-	// w.WriteJson(*bv)
 
 	b, err := json.MarshalIndent(bv.itemVersions, "", "  ")
 

@@ -186,5 +186,16 @@ func markNodeUpOrDown(url string, upOrDown bool) {
 	index, in := farm.NodeIds[url]
 	if in {
 		farm.NodeUris[index].Up = upOrDown
+
+	}
+}
+
+// load the farm with all possible flocks using the first two chars of the key method
+func SetupDefaultFlocks() {
+	for _, c1 := range KEY_CHARS {
+		for _, c2 := range KEY_CHARS {
+			herd := true
+			AddNodeToFlock(MyUri(), string(c1)+string(c2), herd, false)
+		}
 	}
 }
