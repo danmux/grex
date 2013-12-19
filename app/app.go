@@ -36,6 +36,8 @@ func InitGrex(dataRootLoc string, uri string, port string, pond int) {
 
 	initialiseVersionCache(1024 * 100) // 100k for versions
 
+	initialiseItemCache(300000) // 300,0000 rows - eg if its xactions - this will be about 20M
+
 	// and confirm it is node 0
 	node0, _ := LookupNode(0)
 	log.Println("Node 0: ", node0)

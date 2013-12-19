@@ -15,6 +15,14 @@ func getFarm(w *rest.ResponseWriter, req *rest.Request) {
 	w.WriteJson(farm)
 }
 
+func getVCache(w *rest.ResponseWriter, req *rest.Request) {
+	w.Write([]byte(bucketItemVCache.StatsJSON()))
+}
+
+func getICache(w *rest.ResponseWriter, req *rest.Request) {
+	w.Write([]byte(itemCache.StatsJSON()))
+}
+
 func getMeta(w *rest.ResponseWriter, req *rest.Request) {
 	key := req.PathParam("blobkey")
 	log.Println(key)
@@ -34,6 +42,8 @@ func StartRestServer(listen string) {
 	handler := rest.ResourceHandler{}
 	handler.SetRoutes(
 		rest.Route{"GET", "/.farm", getFarm},
+		rest.Route{"GET", "/.vcache", getVCache},
+		rest.Route{"GET", "/.icache", getICache},
 		rest.Route{"GET", "/.meta/:blobkey", getMeta},
 	)
 	http.ListenAndServe(listen, &handler)

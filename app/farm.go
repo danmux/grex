@@ -38,8 +38,6 @@ type FlockStatus struct {
 	Herder bool
 	// is if herding - if this is false and Herder is true, then the Node has not got a copy of the flock data yet
 	Herding bool
-	// does the Node have the data in cache
-	Cached bool
 }
 
 // array (rather than linked list as modes rarely added or removed)
@@ -96,7 +94,7 @@ func getHerdersForBucket(bucketKey string, allowPartialHerding bool) (bool, []st
 }
 
 // Register that a Node with given uri is herding / or not a particular flock 
-func AddNodeToFlock(uri string, flockKey string, herder bool, cached bool) error {
+func AddNodeToFlock(uri string, flockKey string, herder bool) error {
 	// check the Node exists in our list
 	index, in := farm.NodeIds[uri]
 	if !in {
@@ -106,7 +104,6 @@ func AddNodeToFlock(uri string, flockKey string, herder bool, cached bool) error
 	flock := FlockStatus{
 		Node:   index,
 		Herder: herder,
-		Cached: cached,
 	}
 
 	nl, in := farm.Farm[flockKey]
@@ -163,7 +160,7 @@ func LookupNode(id nodeIndex) (NodeStatus, error) {
 
 func addExternalFarm(url string, newfarm *SingleNodeFarm) {
 	for k, f := range newfarm.Flocks {
-		AddNodeToFlock(url, k, f.Herder, f.Cached)
+		AddNodeToFlock(url, k, f.Herder)
 	}
 }
 
