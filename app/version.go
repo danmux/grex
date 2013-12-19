@@ -15,7 +15,7 @@ import (
 // map of item keys
 type itemVersionMap map[string]uint64
 
-// interface to allow it into the vitesse cache - so it can guesse how much ram is being used
+// interface to allow it into the vitesse cache - so it can guess how much ram is being used
 func (i itemVersionMap) Size() int {
 	return len(i) * 64
 }

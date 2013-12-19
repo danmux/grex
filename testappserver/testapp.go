@@ -7,7 +7,7 @@ import (
 	"log"
 	"net/http"
 	"strconv"
-	"time"
+	// "time"
 )
 
 type Xact struct {
@@ -180,7 +180,7 @@ func main() {
 					herd = false
 				}
 			}
-			app.AddNodeToFlock(app.MyUri(), string(c1)+string(c2), herd, false)
+			app.AddNodeToFlock(app.MyUri(), string(c1)+string(c2), herd)
 		}
 	}
 
