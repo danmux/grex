@@ -98,13 +98,16 @@ func GetBytes(key string, itemKey string) (*BlobArg, error) {
 	// do we care about this bucket - is it in a flock we are herding - then grab it locally
 	// local disk access is still quicker than getting it from a remote nodes cache?
 	if imHerding {
-		log.Println("im hearding :" + key)
+		log.Println("Debug - im herding :" + key)
 
 		// first check local version if it is less than the max remote versions 
 		// then get dont get this now - and set the should repair flag - so we persist the latest version locally
 		bv = getBucketVersion(key)
 		myVer := bv.getVersion(itemKey)
 
+		if maxRemoteVersion == 0 {
+			log.Println("Warning - No remotes to query or no remote data, hence potentialy vulnerable data")
+		}
 		if myVer < maxRemoteVersion {
 			log.Printf("local inconsistant with version %d remotes as %d\n", myVer, maxRemoteVersion)
 			imInconsistant = true
@@ -124,40 +127,58 @@ func GetBytes(key string, itemKey string) (*BlobArg, error) {
 
 	// synchronously try each node that have the highest version numbers in turn - until one succeeds
 	// TODO - prioritise quiet nodes
-	for _, nodeUrl := range *uptoDateUrls {
-		conn, err := GetConnection(nodeUrl)
-		if err != nil {
-			errorCount++
-			log.Println("Error - failed to get connection for: " + nodeUrl)
-		} else {
+	if uptoDateUrls != nil {
+		log.Println("got some others")
+		for _, nodeUrl := range *uptoDateUrls {
 
-			err = conn.Client.Call("Bleets.GetBlob", args, reply)
-			conn.InUse = false
+			log.Println("trying " + nodeUrl)
+
+			conn, err := GetConnection(nodeUrl)
 			if err != nil {
-				conn.IsBad = true
 				errorCount++
-				log.Println("Error - failed to get blob from replicating node: " + nodeUrl)
+				log.Println("Error - failed to get connection for: " + nodeUrl)
 			} else {
-				// got a good one from remote source, so that will do
 
-				// so if our node was not consistant then save this file and version
-				if imInconsistant {
-					log.Printf("Got inconsistant local version - so updating to remote version %d", maxRemoteVersion)
-					bv.setVersion(itemKey, maxRemoteVersion)
-					putBucketVersion(bv)
-					putData(reply)
+				err = conn.Client.Call("Bleets.GetBlob", args, reply)
+				conn.InUse = false
+				if err != nil {
+					conn.IsBad = true
+					errorCount++
+					log.Println("Error - failed to get blob from replicating node: " + nodeUrl)
+				} else {
+					// got a good one from remote source, so that will do
+
+					// so if our node was not consistant then save this file and version
+					if imInconsistant {
+						log.Printf("Got inconsistant local version - so updating to remote version %d", maxRemoteVersion)
+						bv.setVersion(itemKey, maxRemoteVersion)
+						putBucketVersion(bv)
+						putData(reply)
+					}
+					break
 				}
-				break
 			}
 		}
+	} else {
+		log.Println("Warning - This node is isolated hence potentialy vulnerable data")
 	}
 
 	if errorCount > 0 {
 		reply.Message = "warning"
 
-		if errorCount == len(othersHerding) {
+		maxErrors := len(othersHerding)
+		if imHerding {
+			maxErrors++
+		}
+
+		if errorCount == maxErrors {
+			log.Println("Error - failed to get this data from any node")
 			reply.Message = "critical"
 			return reply, errors.New("Could not read this data from any node")
+		}
+		if errorCount == maxErrors-1 {
+			reply.Message = "warning"
+			return reply, errors.New("This data is only available on one node")
 		}
 	}
 
@@ -245,11 +266,11 @@ func PostBytes(key string, itemKey string, data *([]byte)) (string, error) {
 			maxErrors++
 		}
 
-		if errorCount == len(othersHerding)+1 {
+		if errorCount == maxErrors {
 			return "critical", errors.New("NO nodes persisted the data")
 		}
-		if errorCount == len(othersHerding) {
-			return "error", errors.New("Only one node persisted the blob")
+		if errorCount == maxErrors-1 {
+			return "warning", errors.New("Only one node persisted the blob")
 		}
 	}
 

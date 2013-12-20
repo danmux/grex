@@ -19,7 +19,7 @@ func getPath(blob *BlobArg) string {
 // read in data from the file system
 func getData(blob *BlobArg) error {
 
-	log.Println("reading local file: " + getPath(blob))
+	log.Println("Debug - reading local file: " + getPath(blob))
 	n, err := ioutil.ReadFile(getPath(blob))
 	if err != nil {
 		return err
@@ -27,7 +27,6 @@ func getData(blob *BlobArg) error {
 	blob.Message = "good"
 	blob.Payload = n
 
-	log.Println("GET-done")
 	return nil
 }
 

@@ -10,7 +10,7 @@ import (
 func GetLoadedDecoder(key string, subkey string) (*gob.Decoder, error) {
 	reply, err := GetBytes(key, subkey)
 
-	if err != nil {
+	if reply.Message == "critical" {
 		return nil, err
 	}
 
