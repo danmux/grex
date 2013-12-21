@@ -1,7 +1,6 @@
 package app
 
-// datacache - cache of decoded data types - no need to decode each time
-// any puts to the items will invalidate the cache forcing a reload
+// seshcache - an in memory distributed session cache
 
 import (
 	"crypto/rand"
@@ -57,7 +56,7 @@ func invalidateSeshInCache(sesh *Sesh) {
 	seshCache.Delete(sesh.Key)
 }
 
-// put it in the cache and persist it to disk
+// put it in the cache and share it
 func PutSeshInCache(sesh *Sesh) {
 	seshCache.Set(sesh.Key, *sesh)
 }
@@ -65,6 +64,9 @@ func PutSeshInCache(sesh *Sesh) {
 // return the version map for the bucket
 func GetSeshFromCache(seshKey string) (*Sesh, bool) {
 	sv, in := seshCache.Get(seshKey)
-	ss := sv.(Sesh)
-	return &ss, in
+	if in {
+		ss := sv.(Sesh)
+		return &ss, in
+	}
+	return nil, false
 }

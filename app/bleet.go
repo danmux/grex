@@ -9,9 +9,12 @@ import (
 	"net/rpc"
 )
 
-// all the bleet listening functions
 type Bleets struct{}
 
+// all the bleet listening functions
+//----------------------------------
+
+// remote has requested some local data 
 func (t *Bleets) GetBlob(request *BlobArg, response *BlobArg) error {
 	response.Key = request.Key
 	response.SubKey = request.SubKey
@@ -19,6 +22,7 @@ func (t *Bleets) GetBlob(request *BlobArg, response *BlobArg) error {
 	return err
 }
 
+// remote wants us to store some data locally
 func (t *Bleets) PutBlob(request *BlobArg, response *BlobArg) error {
 	err := putDataIncVersion(request)
 	response.Key = request.Key
@@ -27,15 +31,49 @@ func (t *Bleets) PutBlob(request *BlobArg, response *BlobArg) error {
 	return err
 }
 
+// item key - is this only used in bleeting item versions?
 type Key struct {
 	BucketKey string
 	ItemKey   string
 }
 
+// remote is asking us for our current version of the key
 func (t *Bleets) GetVersion(item *Key, response *uint64) error {
 
 	bv := getBucketVersion(item.BucketKey)
 	*response = bv.getVersion(item.ItemKey)
+	return nil
+}
+
+// remote is asking us if we have the specified session 
+func (t *Bleets) GetSession(key *string, response *Sesh) error {
+
+	// first lets make sure we had our cache initialised
+	if seshCache != nil {
+		sesh, in := GetSeshFromCache(*key)
+		if in {
+			response.Auth = sesh.Auth
+			response.Uid = sesh.Uid
+			response.Key = sesh.Key
+			return nil
+		}
+	}
+	// send a sorry looking session :(
+	response.Auth = false
+	response.Uid = ""
+	response.Key = ""
+	return nil
+}
+
+func (t *Bleets) PutSession(sesh *Sesh, response *int) error {
+
+	// first lets make sure we had our cache initialised
+	if seshCache != nil {
+		PutSeshInCache(sesh)
+		*response = 1
+		return nil
+	}
+	*response = 0
 	return nil
 }
 
@@ -88,6 +126,10 @@ func (t *Bleets) GetNodes(request string, response *NodeList) error {
 	return nil
 }
 
+// all the client bleets....
+//--------------------------
+
+// im ready to listen...
 func StartBleeting(bleetListen string) {
 	hearBleet := new(Bleets)
 	rpc.Register(hearBleet)
@@ -99,7 +141,7 @@ func StartBleeting(bleetListen string) {
 	http.Serve(l, nil)
 }
 
-// al the bleeters
+// oi you tell me all the farms you is mainly caring about
 func tellFarm(url string) error {
 	conn, err := GetConnection(url)
 	if err != nil {
@@ -125,6 +167,7 @@ func tellFarm(url string) error {
 	return nil
 }
 
+// oi you at the end of this url tell me all the nodes you are ware of
 func tellNodes(url string) error {
 	conn, err := GetConnection(url)
 	if err != nil {
@@ -150,7 +193,8 @@ func tellNodes(url string) error {
 	return nil
 }
 
-func tellVersion(url string, bucketKey string, itemKey string) (uint64, error) {
+// ask a remote node for the version for this item
+func tellMeYourVersion(url string, bucketKey string, itemKey string) (uint64, error) {
 	conn, err := GetConnection(url)
 	if err != nil {
 		return 0, err
@@ -171,4 +215,42 @@ func tellVersion(url string, bucketKey string, itemKey string) (uint64, error) {
 		return 0, err
 	}
 	return reply, nil
+}
+
+// ask a remote node for any session for this key
+func tellMeYourSession(url string, seshKey string) (*Sesh, error) {
+	conn, err := GetConnection(url)
+	if err != nil {
+		return nil, err
+	}
+
+	var reply Sesh
+
+	err = conn.Client.Call("Bleets.GetSession", &seshKey, &reply)
+	conn.InUse = false
+
+	if err != nil {
+		conn.IsBad = true
+		return nil, err
+	}
+	return &reply, nil
+}
+
+// tell a remote node for the version for this item
+func hereIsMySession(url string, sesh *Sesh) error {
+	conn, err := GetConnection(url)
+	if err != nil {
+		return err
+	}
+
+	var reply int
+
+	err = conn.Client.Call("Bleets.PutSession", sesh, &reply)
+	conn.InUse = false
+
+	if err != nil {
+		conn.IsBad = true
+		return err
+	}
+	return nil
 }

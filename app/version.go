@@ -1,6 +1,12 @@
 package app
 
-// version - maintains the version cache is the node management data and functions
+// version - maintains the version cache all buckets have a .versions file that keeps track of versoions of 
+//           all keys in the bucket - all writes update the file on disk and ripples it across any herder node
+//           updating thier versions.
+// 			 versions works hand in hand withe the store...
+//           A read of the version file will only attempt to get the version from cache or the local disk - not the cluster.  
+//           the data reads themselves (from the store) will have contacted all herders to check their versions.
+//           and updated the local copy to the latest version if needed.
 
 import (
 	// "errors"
@@ -117,7 +123,8 @@ func putBucketVersion(bv *bucketVersion) chan error {
 	return ch
 }
 
-// return the version map for the bucket
+// return the version map for the bucket - from our version cache first and foremost
+// then from our local persistant serialisation store (or disk as it used to be known)
 func getBucketVersion(bucketKey string) *bucketVersion {
 
 	bv := bucketVersion{

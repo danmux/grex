@@ -33,7 +33,7 @@ func getRemoteVersions(herders []string, key string, itemKey string) (uint64, *(
 	for _, nodeUrl := range herders {
 
 		go func(url string, key string, itemKey string) {
-			ver, err := tellVersion(url, key, itemKey)
+			ver, err := tellMeYourVersion(url, key, itemKey)
 			if err != nil {
 				log.Println("Error - failed to get version from node: " + url)
 				ver = 0
@@ -185,7 +185,8 @@ func GetBytes(key string, itemKey string) (*BlobArg, error) {
 	return reply, nil
 }
 
-// get current version from version cache, up the version persist version ans persist the data,  
+// get current version from version cache, up the version persist version and persist the data, 
+//   both locally and on any herding nodes
 func PostBytes(key string, itemKey string, data *([]byte)) (string, error) {
 
 	// get whether im herding it and the list of other herders
