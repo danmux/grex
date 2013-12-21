@@ -11,17 +11,9 @@ func Test_AddNodeLow(t *testing.T) { //test function starts with "Test" and take
 	AddNode("testurl1", true, true)
 
 	// node index 0 must always be the current node
-	v, _ := LookupNode(0)
+	v := LocalNodeStatus()
 	if v.Url != "my.eg.uri:8888" {
 		t.Error("Initiluse didnt add my url at location 0. " + v.Url)
-	}
-
-	v, _ = LookupNode(1)
-
-	if v.Url != "testurl1" {
-		t.Error("AddNode didnt add at location 1.")
-	} else {
-		t.Log("one test passed.")
 	}
 }
 
@@ -32,14 +24,7 @@ func Test_AddNodeHigh(t *testing.T) {
 	// add a 
 	AddNode("testurl23", true, true)
 
-	v, _ := LookupNode(1)
-	if v.Url != "testurl23" {
-		t.Error("AddNode didnt add at location 23.")
-	} else {
-		t.Log("two test passed.")
-	}
-
-	if len(farm.NodeStatuses) != 2 {
+	if len(farm.NodeIds) != 2 {
 		t.Error("farm grew badly.")
 	}
 
@@ -63,14 +48,7 @@ func Test_AddNodeHigh(t *testing.T) {
 		t.Error("Node should not be new")
 	}
 
-	v, _ = LookupNode(2)
-	if v.Url != "testurl 30" {
-		t.Error("AddNode didnt add at location 30.")
-	} else {
-		t.Log("three test passed.")
-	}
-
-	if len(farm.NodeStatuses) != 3 {
+	if len(farm.NodeIds) != 3 {
 		t.Error("farm grew badly.")
 	}
 
@@ -79,23 +57,13 @@ func Test_AddNodeHigh(t *testing.T) {
 		AddNode(f, true, true)
 	}
 
-	if len(farm.NodeStatuses) != MAX_NODES {
+	if len(farm.NodeIds) != MAX_NODES {
 		t.Error("wrong number of nodes")
 	}
 
 	_, _, err = AddNode("poo", true, true)
 	if err == nil {
 		t.Error("too many nodes allowed")
-	}
-
-	node, err = LookupNode(135)
-	if node.Url != "good 132" {
-		t.Error("wrong node at index 134")
-	}
-
-	_, err = LookupNode(13400)
-	if err == nil {
-		t.Error("allowed me to lookmup stupid node")
 	}
 }
 
