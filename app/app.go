@@ -18,31 +18,47 @@ var farm nodeMap
 var dataRoot string
 
 // set up the farm 
-func InitGrex(dataRootLoc string, uri string, port string, pond int) {
+func InitGrex(dataRootLoc string, uri string, port string, pond int, sesh int) {
 
 	setRootPath(dataRootLoc, port)
 	farm = nodeMap{}
 	farm.MyUri = uri + ":" + port
 
-	farm.NodeUris = make(nodeLookup, 0, 10)
-	farm.NodeIds = make(nodeNameMap)
+	// start with 10 but can be thousands
+	farm.NodeIds = make(NodeNameMap, 10)
 	farm.Farm = make(map[string]nodeList)
 
-	// add me to the Lookups and map
-	AddNode(farm.MyUri)
+	// add me to the Lookups and map, im up and i might be a session server
+	localNode, isNew, err := AddNode(farm.MyUri, true, sesh > 0)
+	// we cant have any errors adding the local node
+	if err != nil {
+		log.Panic(err)
+	}
+
+	if !isNew {
+		log.Panic("The local node can only be added once")
+	}
+
+	localNode.Local = true
+
+	farm.localNode = localNode
 
 	// initialise the app with pond connections in the pond per url
 	connectionPond.init(pond)
 
 	initialiseVersionCache(1024 * 100) // 100k for versions
 
+	// set up the session cach in 1M steps
+	if sesh > 0 {
+		initialiseSeshCache(int64(sesh) * 1024 * 1024)
+	}
+
 	initialiseItemCache(300000) // 300,0000 rows - eg if its xactions - this will be about 20M
 
-	// and confirm it is node 0
-	node0, _ := LookupNode(0)
-	log.Println("Node 0: ", node0)
+	log.Println("Local node: ", LocalNodeStatus())
 }
 
+// start serving our bleet server - and find out all other nodes from the seed list
 func StartServing(bleetAddy string, restAddy string, seedUrls []string) {
 
 	go StartBleeting(bleetAddy)
@@ -54,6 +70,8 @@ func StartServing(bleetAddy string, restAddy string, seedUrls []string) {
 			log.Println(err)
 		}
 	}
+
+	refreshSeshServers()
 
 	StartRestServer(restAddy)
 }

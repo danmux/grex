@@ -7,7 +7,7 @@ import (
 	"log"
 	"net/http"
 	"strconv"
-	// "time"
+	"time"
 )
 
 type Xact struct {
@@ -136,9 +136,42 @@ func postXacts(w *rest.ResponseWriter, req *rest.Request) {
 	}
 }
 
+func postSesh(w *rest.ResponseWriter, req *rest.Request) {
+
+	var sesh app.Sesh
+	err := req.DecodeJsonPayload(&sesh)
+	if err != nil {
+		rest.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	err = app.PutSeshInCache(&sesh)
+	if err != nil {
+		rest.Error(w, err.Error(), http.StatusInternalServerError)
+	} else {
+		w.WriteJson(sesh)
+	}
+}
+
+func getSesh(w *rest.ResponseWriter, req *rest.Request) {
+	key := req.PathParam("key")
+
+	sesh, found, err := app.GetSeshFromCache(key)
+	if err != nil {
+		rest.Error(w, err.Error(), 500)
+	} else if !found {
+		rest.Error(w, "not found", 404)
+	} else {
+		w.WriteJson(sesh)
+	}
+}
+
 func StartAppServer(listen string) {
 	handler := rest.ResourceHandler{}
 	handler.SetRoutes(
+		rest.Route{"GET", "/sesh/:key", getSesh},
+		rest.Route{"POST", "/sesh", postSesh},
+
 		rest.Route{"GET", "/xacts/:key/:itemKey", getXacts},
 		rest.Route{"POST", "/xacts/:key/:itemKey", postXacts},
 	)
@@ -158,6 +191,7 @@ func main() {
 	flgDnsSeed := flag.String("seed", "localhost:8019", "The protocol and dns address of this server - it must be unique in the cluster")
 	flgDataRoot := flag.String("data", defaultDataRoot, "Root folder location for this node")
 	flgPondSize := flag.Int("pond", 20, "Pond connections per node")
+	flgSeshSize := flag.Int("session", 1, "integer value of megabytes to assign to the session cache")
 
 	flag.Parse()
 
@@ -166,7 +200,7 @@ func main() {
 	}
 
 	// initialise the farm for this node with the nodes uri
-	app.InitGrex(dataRoot, *flgDnsName, *flgPort, *flgPondSize)
+	app.InitGrex(dataRoot, *flgDnsName, *flgPort, *flgPondSize, *flgSeshSize)
 
 	// confirm this servers uri
 	log.Println("My UIR: ", app.MyUri())
@@ -216,6 +250,37 @@ func main() {
 	// 	}()
 
 	// }
+
+	if *flgPort == "8029" {
+
+		ticker := time.NewTicker(2000 * time.Millisecond)
+		// thingy := makeSomeXacts()
+		loops := 0
+
+		go func() {
+
+			select {
+			case <-ticker.C:
+				loops = 0
+				for loops < 50 {
+					log.Println("timer")
+
+					// saveSomeXacts(thingy)
+
+					sesh := app.NewSesh()
+
+					err := app.PutSeshInCache(sesh)
+					log.Println(err)
+
+					loops++
+
+					println(loops)
+
+				}
+			}
+		}()
+
+	}
 
 	seeds := []string{*flgDnsSeed}
 

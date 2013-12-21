@@ -7,8 +7,8 @@ import (
 
 func Test_AddNodeLow(t *testing.T) { //test function starts with "Test" and takes a pointer to type testing.T
 
-	InitGrex("/what/path", "my.eg.uri", "8888", 10)
-	AddNode("testurl1")
+	InitGrex("/what/path", "my.eg.uri", "8888", 10, 0)
+	AddNode("testurl1", true, true)
 
 	// node index 0 must always be the current node
 	v, _ := LookupNode(0)
@@ -27,10 +27,10 @@ func Test_AddNodeLow(t *testing.T) { //test function starts with "Test" and take
 
 func Test_AddNodeHigh(t *testing.T) {
 
-	InitGrex("/what/path", "localhost-something-normally", "8888", 10)
+	InitGrex("/what/path", "localhost-something-normally", "8888", 10, 1)
 
 	// add a 
-	AddNode("testurl23")
+	AddNode("testurl23", true, true)
 
 	v, _ := LookupNode(1)
 	if v.Url != "testurl23" {
@@ -39,23 +39,23 @@ func Test_AddNodeHigh(t *testing.T) {
 		t.Log("two test passed.")
 	}
 
-	if len(farm.NodeUris) != 2 {
+	if len(farm.NodeStatuses) != 2 {
 		t.Error("farm grew badly.")
 	}
 
-	ind, isNew, err := AddNode("testurl 30")
+	node, isNew, err := AddNode("testurl 30", true, true)
 
-	if ind != 2 {
-		t.Error("Bad node index.")
+	if node == nil {
+		t.Error("Bad node.")
 	}
 
 	if !isNew {
 		t.Error("Node should be new")
 	}
 
-	ind, isNew, err = AddNode("testurl 30")
+	node, isNew, err = AddNode("testurl 30", true, true)
 
-	if ind != 2 {
+	if node == nil {
 		t.Error("Bad node index.")
 	}
 
@@ -70,25 +70,25 @@ func Test_AddNodeHigh(t *testing.T) {
 		t.Log("three test passed.")
 	}
 
-	if len(farm.NodeUris) != 3 {
+	if len(farm.NodeStatuses) != 3 {
 		t.Error("farm grew badly.")
 	}
 
 	for i := 0; i < MAX_NODES-3; i++ {
 		f := fmt.Sprintf("good %d", i)
-		AddNode(f)
+		AddNode(f, true, true)
 	}
 
-	if len(farm.NodeUris) != MAX_NODES {
+	if len(farm.NodeStatuses) != MAX_NODES {
 		t.Error("wrong number of nodes")
 	}
 
-	_, _, err = AddNode("poo")
+	_, _, err = AddNode("poo", true, true)
 	if err == nil {
 		t.Error("too many nodes allowed")
 	}
 
-	node, err := LookupNode(135)
+	node, err = LookupNode(135)
 	if node.Url != "good 132" {
 		t.Error("wrong node at index 134")
 	}
@@ -100,20 +100,20 @@ func Test_AddNodeHigh(t *testing.T) {
 }
 
 func Test_AddNodeToFlock(t *testing.T) {
-	InitGrex("/what/path", "myurl", "0000", 10) // node index 0
+	InitGrex("/what/path", "myurl", "0000", 10, 2) // node index 0
 
-	AddNode("testurl 0") // node index 1
-	AddNode("testurl 1")
-	AddNode("testurl 2")
-	AddNode("testurl 3") // will have index 4
-	AddNode("testurl X")
+	AddNode("testurl 0", true, true) // node index 1
+	AddNode("testurl 1", true, true)
+	AddNode("testurl 2", true, true)
+	AddNode("testurl 3", true, true) // will have index 4
+	AddNode("testurl X", true, true)
 
 	err := AddNodeToFlock("testurl 3", "ab", true)
 	if err != nil {
 		t.Error(err)
 	}
 
-	if farm.Farm["ab"][0].Node != 4 {
+	if farm.Farm["ab"][0].Node.Url != "testurl 3" {
 		t.Error("flock 'ab' node 0 has wrong node index")
 	}
 
@@ -130,7 +130,7 @@ func Test_AddNodeToFlock(t *testing.T) {
 	// add a new node to the ab flock
 	err = AddNodeToFlock("testurl X", "ab", true)
 
-	if farm.Farm["ab"][1].Node != 5 {
+	if farm.Farm["ab"][1].Node.Url != "testurl X" {
 		t.Error("flock 1 has wrong node")
 	}
 

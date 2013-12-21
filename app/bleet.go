@@ -3,6 +3,7 @@ package app
 //bleet - interprocess communication 
 
 import (
+	"errors"
 	"log"
 	"net"
 	"net/http"
@@ -50,7 +51,10 @@ func (t *Bleets) GetSession(key *string, response *Sesh) error {
 
 	// first lets make sure we had our cache initialised
 	if seshCache != nil {
-		sesh, in := GetSeshFromCache(*key)
+		sesh, in, err := GetSeshFromCache(*key)
+		if err != nil {
+			return err
+		}
 		if in {
 			response.Auth = sesh.Auth
 			response.Uid = sesh.Uid
@@ -67,9 +71,13 @@ func (t *Bleets) GetSession(key *string, response *Sesh) error {
 
 func (t *Bleets) PutSession(sesh *Sesh, response *int) error {
 
+	log.Println("saving session " + sesh.Key)
 	// first lets make sure we had our cache initialised
 	if seshCache != nil {
-		PutSeshInCache(sesh)
+		err := persistInCache(sesh)
+		if err != nil {
+			return err
+		}
 		*response = 1
 		return nil
 	}
@@ -78,12 +86,14 @@ func (t *Bleets) PutSession(sesh *Sesh, response *int) error {
 }
 
 type SingleNodeFarm struct {
-	Flocks map[string]FlockStatus
+	IsSessionServer bool
+	Flocks          map[string]FlockStatus
 }
 
 // Rpc call to share a nodes individual farm information
 // request is the url of the requesting node
 func (t *Bleets) GetFarm(request string, response *SingleNodeFarm) error {
+	response.IsSessionServer = seshCache != nil
 	response.Flocks = make(map[string]FlockStatus)
 	for k, fl := range farm.Farm {
 		f := fl[0]
@@ -99,28 +109,29 @@ func (t *Bleets) GetFarm(request string, response *SingleNodeFarm) error {
 	return nil
 }
 
+// wrapper struct for nodeLookups
 type NodeList struct {
-	Nodes nodeLookup
+	Nodes NodeNameMap
 }
 
 // Rpc call to share a nodes individual known nodes
 // request is the url of the requesting node
-func (t *Bleets) GetNodes(request string, response *NodeList) error {
-	response.Nodes = farm.NodeUris
+func (t *Bleets) GetNodes(request *NodeStatus, response *NodeList) error {
+	response.Nodes = farm.NodeIds
 
 	// ad the requesting node - and if it is new then request thier farm
-	_, isNew, err := AddNode(request)
+	_, isNew, err := AddNode(request.Url, request.Up, request.SeshServer)
 	if err != nil {
 		return err
 	} else if isNew {
-		err := tellNodes(request)
+		err := tellNodes(request.Url)
 		if err != nil {
 			return err
 		}
-		return tellFarm(request)
+		return tellFarm(request.Url)
 	} else {
 		// we have it so lets make sure we know its up
-		markNodeUpOrDown(request, true)
+		markNodeUpOrDown(request.Url, true)
 	}
 
 	return nil
@@ -174,11 +185,15 @@ func tellNodes(url string) error {
 		return err
 	}
 
-	caller := MyUri()
+	// i must be the first node
+	local := LocalNodeStatus()
+	if local == nil {
+		return errors.New("We have not initialised our own node before contacting peers")
+	}
 
 	var reply NodeList
 
-	err = conn.Client.Call("Bleets.GetNodes", caller, &reply)
+	err = conn.Client.Call("Bleets.GetNodes", local, &reply)
 	conn.InUse = false
 
 	if err != nil {

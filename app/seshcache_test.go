@@ -4,13 +4,24 @@ import (
 	"testing"
 )
 
+func Test_CacheMissing(t *testing.T) { //test function starts with "Test" and takes a pointer to type testing.T
+	// make sure the cache isnt allocated
+	seshCache = nil
+
+	InitGrex("", "my.eg.uri", "8888", 10, 0)
+	sesh1 := NewSesh()
+	err := PutSeshInCache(sesh1)
+	if err == nil {
+		t.Error("did not ger an error from an empty cache")
+	}
+	t.Log(err)
+}
+
 func Test_SeshCache(t *testing.T) { //test function starts with "Test" and takes a pointer to type testing.T
-	InitGrex("", "my.eg.uri", "8888", 10)
+	InitGrex("", "my.eg.uri", "8888", 10, 1)
 
-	initialiseSeshCache(1048576)
-
-	sesh1 := newSesh()
-	sesh2 := newSesh()
+	sesh1 := NewSesh()
+	sesh2 := NewSesh()
 
 	t.Log(sesh1.Key)
 	t.Log(sesh2.Key)
@@ -35,7 +46,11 @@ func Test_SeshCache(t *testing.T) { //test function starts with "Test" and takes
 	PutSeshInCache(sesh1)
 	PutSeshInCache(sesh2)
 
-	testSesh1, in1 := GetSeshFromCache(sKey1)
+	testSesh1, in1, err := GetSeshFromCache(sKey1)
+
+	if err != nil {
+		t.Error(err)
+	}
 
 	if !in1 {
 		t.Error("cache missing key 1")
@@ -45,7 +60,7 @@ func Test_SeshCache(t *testing.T) { //test function starts with "Test" and takes
 		t.Error("sesh 1 not retrieved correctly")
 	}
 
-	testSesh2, in2 := GetSeshFromCache(sKey2)
+	testSesh2, in2, _ := GetSeshFromCache(sKey2)
 
 	if !in2 {
 		t.Error("cache missing key 2")
@@ -56,7 +71,7 @@ func Test_SeshCache(t *testing.T) { //test function starts with "Test" and takes
 	}
 
 	// now test for bad hits
-	testSeshMissing, errorIn := GetSeshFromCache("missingkey")
+	testSeshMissing, errorIn, _ := GetSeshFromCache("missingkey")
 
 	if errorIn {
 		t.Error("missing key odly found in cache")
