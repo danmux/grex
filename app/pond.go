@@ -33,7 +33,7 @@ func (b *pond) getConnection(connectString string) (*connection, error) {
 	// our pools are per url (connection string)
 	conList, in := b.ConnPool[connectString]
 	if !in {
-		log.Println("adding new pool for > " + connectString + " to the pool map")
+		log.Println("Debug - adding new pond for > " + connectString + " to the pool map")
 		conList = make([]*connection, b.PoolSize)
 		b.ConnPool[connectString] = conList
 	}

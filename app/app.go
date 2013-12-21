@@ -55,7 +55,7 @@ func InitGrex(dataRootLoc string, uri string, port string, pond int, sesh int) {
 
 	initialiseItemCache(300000) // 300,0000 rows - eg if its xactions - this will be about 20M
 
-	log.Println("Local node: ", LocalNodeStatus())
+	log.Println("Debug - Local node: ", LocalNodeStatus())
 }
 
 // start serving our bleet server - and find out all other nodes from the seed list
@@ -67,7 +67,7 @@ func StartServing(bleetAddy string, restAddy string, seedUrls []string) {
 	for _, s := range seedUrls {
 		err := tellNodes(s)
 		if err != nil {
-			log.Println(err)
+			log.Println("Error - " + err)
 		}
 	}
 
