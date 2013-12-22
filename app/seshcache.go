@@ -34,7 +34,6 @@ func GenerateRandomKey(strength int) *string {
 var seshCache *cache.LRUCache // the lru of bucket versions
 
 func initialiseSeshCache(size int64) {
-	println("--------------------------------------------------------------------------")
 	seshCache = cache.NewLRUCache(size)
 }
 

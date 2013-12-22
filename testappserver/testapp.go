@@ -2,12 +2,10 @@ package main
 
 import (
 	"ext/go-json-rest"
-	"flag"
 	"grex/app"
 	"log"
 	"net/http"
 	"strconv"
-	"time"
 )
 
 type Xact struct {
@@ -181,42 +179,24 @@ func StartAppServer(listen string) {
 
 func main() {
 
-	defaultDataRoot := "~/grex/data"
-	dataRoot := ""
-
-	flgServerPort := flag.String("serverport", "8007", "port number to start on")
-	flgRestPort := flag.String("restport", "8008", "port number to start on")
-	flgPort := flag.String("port", "8009", "port number to start bleeter on")
-	flgDnsName := flag.String("name", "localhost", "The protocol and dns address of this server - it must be unique in the cluster")
-	flgDnsSeed := flag.String("seed", "localhost:8019", "The protocol and dns address of this server - it must be unique in the cluster")
-	flgDataRoot := flag.String("data", defaultDataRoot, "Root folder location for this node")
-	flgPondSize := flag.Int("pond", 20, "Pond connections per node")
-	flgSeshSize := flag.Int("session", 1, "integer value of megabytes to assign to the session cache")
-
-	flag.Parse()
-
-	if defaultDataRoot != *flgDataRoot {
-		dataRoot = *flgDataRoot
-	}
-
 	// initialise the farm for this node with the nodes uri
-	app.InitGrex(dataRoot, *flgDnsName, *flgPort, *flgPondSize, *flgSeshSize)
+	app.LoadGrex()
 
 	// confirm this servers uri
 	log.Println("My UIR: ", app.MyUri())
 
-	// load the farm with all possible flocks using the first two chars of the key method
-	for _, c1 := range app.KEY_CHARS {
-		for _, c2 := range app.KEY_CHARS {
-			herd := true
-			if *flgPort == "8029" {
-				if c1 == 'd' {
-					herd = false
-				}
-			}
-			app.AddNodeToFlock(app.MyUri(), string(c1)+string(c2), herd)
-		}
-	}
+	// // load the farm with all possible flocks using the first two chars of the key method
+	// for _, c1 := range app.KEY_CHARS {
+	// 	for _, c2 := range app.KEY_CHARS {
+	// 		herd := true
+	// 		if *flgPort == "8029" {
+	// 			if c1 == 'd' {
+	// 				herd = false
+	// 			}
+	// 		}
+	// 		app.AddNodeToFlock(app.MyUri(), string(c1)+string(c2), herd)
+	// 	}
+	// }
 
 	// 42 loops in 10 seconds = 4.2 per second
 	// 160MB per second
@@ -251,42 +231,41 @@ func main() {
 
 	// }
 
-	if *flgPort == "8029" {
+	// if *flgPort == "8029" {
 
-		ticker := time.NewTicker(2000 * time.Millisecond)
-		// thingy := makeSomeXacts()
-		loops := 0
+	// 	ticker := time.NewTicker(2000 * time.Millisecond)
+	// 	// thingy := makeSomeXacts()
+	// 	loops := 0
 
-		go func() {
+	// 	go func() {
 
-			select {
-			case <-ticker.C:
-				loops = 0
-				for loops < 50 {
-					log.Println("timer")
+	// 		select {
+	// 		case <-ticker.C:
+	// 			loops = 0
+	// 			for loops < 50 {
+	// 				log.Println("timer")
 
-					// saveSomeXacts(thingy)
+	// 				// saveSomeXacts(thingy)
 
-					sesh := app.NewSesh()
+	// 				sesh := app.NewSesh()
 
-					err := app.PutSeshInCache(sesh)
-					log.Println(err)
+	// 				err := app.PutSeshInCache(sesh)
+	// 				log.Println(err)
 
-					loops++
+	// 				loops++
 
-					println(loops)
+	// 				println(loops)
 
-				}
-			}
-		}()
+	// 			}
+	// 		}
+	// 	}()
+	// }
 
-	}
-
-	seeds := []string{*flgDnsSeed}
+	// seeds := []string{*flgDnsSeed}
 
 	// serve the bleets and rest web server, and contact all seeds to get other nodes status
-	go app.StartServing(":"+*flgPort, ":"+*flgRestPort, seeds)
+	go app.ServeGrex()
 
-	StartAppServer(":" + *flgServerPort)
+	StartAppServer(app.GetAppServerAddress())
 
 }

@@ -3,9 +3,6 @@ package app
 
 import (
 	"log"
-	"os"
-	"os/user"
-	"path/filepath"
 )
 
 // the tcp connection pond
@@ -14,13 +11,25 @@ var connectionPond pond
 // nodes and flock management
 var farm nodeMap
 
-// where all data is to be kept
-var dataRoot string
+// initGrex from command line and conf file
+func LoadGrex() {
+	err := loadConf()
 
-// set up the farm 
-func InitGrex(dataRootLoc string, uri string, port string, pond int, sesh int) {
+	if err != nil {
+		log.Println("Error - " + err.Error())
+	}
 
-	setRootPath(dataRootLoc, port)
+	InitGrex(config.StoreRoot, config.InternalName, config.Ports.Bleeter, config.PondSize, config.SeshCacheSize)
+}
+
+// start serving useing comand line and config file
+func ServeGrex() {
+	StartServing(farm.MyUri, config.ExternalName+":"+config.Ports.IntRest, config.Seeds)
+}
+
+// set up the farm without a config file or command line parsing
+func InitGrex(storeRootLoc string, uri string, port string, pond int, sesh int64) {
+
 	farm = nodeMap{}
 	farm.MyUri = uri + ":" + port
 
@@ -67,39 +76,11 @@ func StartServing(bleetAddy string, restAddy string, seedUrls []string) {
 	for _, s := range seedUrls {
 		err := tellNodes(s)
 		if err != nil {
-			log.Println("Error - " + err)
+			log.Println("Error - " + err.Error())
 		}
 	}
 
 	refreshSeshServers()
 
 	StartRestServer(restAddy)
-}
-
-// set the root data folder where the data and other config will be kept
-func setRootPath(root string, port string) {
-
-	usr, err := user.Current()
-	if err != nil {
-		log.Fatal(err)
-	}
-	// using default setting - include port to make testing on the same host less error prone
-	if root == "" {
-		dataRoot = usr.HomeDir + "/grex/data/" + port
-	} else {
-		dataRoot = root
-	}
-
-	// tidy it up and enforce trailing space
-	dataRoot = filepath.Clean(dataRoot) + "/"
-
-	if dataRoot == "//" {
-		log.Fatal("You cant use the root folder for Grex data")
-	}
-
-	// ensure the data root folder exists
-	err = os.MkdirAll(dataRoot, 0750)
-	if err != nil {
-		log.Fatal("Error - cant make root directory")
-	}
 }
