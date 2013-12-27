@@ -1,0 +1,1 @@
+testappserver -conf=/Users/Dan/projects/mine/mtk/newcode/testdata/mtk/8006/conf/conf.json > /var/log/testappserver.log 2>&1

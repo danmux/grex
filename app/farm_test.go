@@ -7,7 +7,7 @@ import (
 
 func Test_AddNodeLow(t *testing.T) { //test function starts with "Test" and takes a pointer to type testing.T
 
-	InitGrex("/what/path", "my.eg.uri", "8888", 10, 0)
+	InitGrex("../testdata", "my.eg.uri", "8888", 10, 0)
 	AddNode("testurl1", true, true)
 
 	// node index 0 must always be the current node
@@ -19,7 +19,7 @@ func Test_AddNodeLow(t *testing.T) { //test function starts with "Test" and take
 
 func Test_AddNodeHigh(t *testing.T) {
 
-	InitGrex("/what/path", "localhost-something-normally", "8888", 10, 1)
+	InitGrex("../testdata", "localhost-something-normally", "8888", 10, 1)
 
 	// add a 
 	AddNode("testurl23", true, true)
@@ -68,7 +68,7 @@ func Test_AddNodeHigh(t *testing.T) {
 }
 
 func Test_AddNodeToFlock(t *testing.T) {
-	InitGrex("/what/path", "myurl", "0000", 10, 2) // node index 0
+	InitGrex("../testdata", "myurl", "0000", 10, 2) // node index 0
 
 	AddNode("testurl 0", true, true) // node index 1
 	AddNode("testurl 1", true, true)
@@ -81,7 +81,7 @@ func Test_AddNodeToFlock(t *testing.T) {
 		t.Error(err)
 	}
 
-	if farm.Farm["ab"][0].Node.Url != "testurl 3" {
+	if farm.Farm["ab"][1].Node.Url != "testurl 3" {
 		t.Error("flock 'ab' node 0 has wrong node index")
 	}
 
@@ -98,14 +98,14 @@ func Test_AddNodeToFlock(t *testing.T) {
 	// add a new node to the ab flock
 	err = AddNodeToFlock("testurl X", "ab", true)
 
-	if farm.Farm["ab"][1].Node.Url != "testurl X" {
+	if farm.Farm["ab"][2].Node.Url != "testurl X" {
 		t.Error("flock 1 has wrong node")
 	}
 
-	for k, fl := range farm.Farm {
-		t.Log(k)
-		for _, nd := range fl {
-			t.Log("  >", nd.Node)
-		}
-	}
+	// for k, fl := range farm.Farm {
+	// 	t.Log(k)
+	// 	for _, nd := range fl {
+	// 		t.Log("  >", nd.Node)
+	// 	}
+	// }
 }

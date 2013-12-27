@@ -172,8 +172,8 @@ func GetBytes(key string, itemKey string) (*BlobArg, error) {
 		}
 
 		if errorCount == maxErrors {
-			log.Println("Error - failed to get this data from any node")
-			reply.Message = "critical"
+			log.Println("Warning - failed to get this data from any node")
+			reply.Message = "missing"
 			return reply, errors.New("Could not read this data from any node")
 		}
 		if errorCount == maxErrors-1 {

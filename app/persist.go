@@ -46,7 +46,7 @@ func putData(blob *BlobArg) error {
 	// invalidate this in the data cache
 	invalidateItemInCache(blob.Key, blob.SubKey)
 
-	log.Println("writing local file " + getPath(blob))
+	log.Println("Debug - writing local file " + getPath(blob))
 
 	os.MkdirAll(getRootPath(blob), 0750)
 	err := ioutil.WriteFile(getPath(blob), blob.Payload, 0640)
@@ -62,7 +62,7 @@ func putData(blob *BlobArg) error {
 
 func deleteData(blob *BlobArg) error {
 
-	log.Println("removing local file " + getPath(blob))
+	log.Println("Debug - removing local file " + getPath(blob))
 
 	err := os.Remove(getPath(blob))
 	if err != nil {

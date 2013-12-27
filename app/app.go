@@ -13,6 +13,7 @@ var farm nodeMap
 
 // initGrex from command line and conf file
 func LoadGrex() {
+	log.Println("Debug - Grex is flocking itself")
 	err := loadConf()
 
 	if err != nil {
@@ -29,6 +30,10 @@ func ServeGrex() {
 
 // set up the farm without a config file or command line parsing
 func InitGrex(storeRootLoc string, uri string, port string, pond int, sesh int64) {
+
+	storeRoot = storeRootLoc
+
+	forceFolders()
 
 	farm = nodeMap{}
 	farm.MyUri = uri + ":" + port
@@ -65,6 +70,9 @@ func InitGrex(storeRootLoc string, uri string, port string, pond int, sesh int64
 	initialiseItemCache(300000) // 300,0000 rows - eg if its xactions - this will be about 20M
 
 	log.Println("Debug - Local node: ", LocalNodeStatus())
+
+	// in future these will come from the config files 
+	SetupDefaultFlocks()
 }
 
 // start serving our bleet server - and find out all other nodes from the seed list

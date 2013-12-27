@@ -12,9 +12,9 @@ import (
 )
 
 type Sesh struct {
-	Key  string
-	Auth bool
-	Uid  string
+	Key  string `json:"key"`
+	Auth bool   `json:"auth"`
+	Uid  string `json:"uid"`
 }
 
 func (s Sesh) Size() int {
@@ -158,8 +158,15 @@ func GetSeshFromCache(seshKey string) (*Sesh, bool, error) {
 			}(nodeUrl, seshKey)
 		}
 
-		// wait for first one back 
-		firstSesh := <-sem
+		var firstSesh *Sesh
+		// loop round and get first none null session
+		for i := 0; i < len(seshServersUrls); i++ {
+			// wait for first one back 
+			firstSesh = <-sem
+			if firstSesh != nil {
+				break
+			}
+		}
 
 		if firstSesh.Key == "" {
 			log.Println("Warning - got no session for this key")

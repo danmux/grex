@@ -8,7 +8,7 @@ func Test_CacheMissing(t *testing.T) { //test function starts with "Test" and ta
 	// make sure the cache isnt allocated
 	seshCache = nil
 
-	InitGrex("", "my.eg.uri", "8888", 10, 0)
+	InitGrex("../testdata", "my.eg.uri", "8888", 10, 0)
 	sesh1 := NewSesh()
 	err := PutSeshInCache(sesh1)
 	if err == nil {
@@ -18,7 +18,7 @@ func Test_CacheMissing(t *testing.T) { //test function starts with "Test" and ta
 }
 
 func Test_SeshCache(t *testing.T) { //test function starts with "Test" and takes a pointer to type testing.T
-	InitGrex("", "my.eg.uri", "8888", 10, 1)
+	InitGrex("../testdata", "my.eg.uri", "8888", 10, 1)
 
 	sesh1 := NewSesh()
 	sesh2 := NewSesh()

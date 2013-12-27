@@ -5,7 +5,7 @@ import (
 )
 
 func Test_GetVersion(t *testing.T) { //test function starts with "Test" and takes a pointer to type testing.T
-	InitGrex("", "my.eg.uri", "8888", 10, 0)
+	InitGrex("../testdata", "my.eg.uri", "8888", 10, 0)
 
 	resetBucketVersion("danm")
 
@@ -24,7 +24,7 @@ func Test_GetVersion(t *testing.T) { //test function starts with "Test" and take
 }
 
 func Test_GetVersionFromDisk(t *testing.T) { //test function starts with "Test" and takes a pointer to type testing.T
-	InitGrex("", "my.eg.uri", "8888", 10, 0)
+	InitGrex("../testdata", "my.eg.uri", "8888", 10, 0)
 	resetBucketVersion("danm")
 
 	bv := getBucketVersion("danm")

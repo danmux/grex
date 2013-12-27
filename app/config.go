@@ -23,7 +23,7 @@ type Config struct {
 	ExternalName  string   `json:"external_ip"` // external for the rest interfaces
 	Ports         Ports    `json:"ports"`
 	Seeds         []string `json:"seeds"`           // the peer servers in this cluster
-	StoreRoot     string   `json:"data_root"`       // the root file location
+	StoreRoot     string   `json:"store_root"`      // the root file location
 	PondSize      int      `json:"pond_size"`       // how big the pond is per node
 	SeshCacheSize int64    `json:"sesh_cache_size"` // how big the session cache size - number of sessions
 	DataCacheSize int64    `json:"data_cache_size"` // how big the data cache size is - number of items (of average size)
@@ -58,7 +58,6 @@ var dataRoot string // the data files
 // set the root data folder where the data and other config will be kept
 func setRootPath(root string, port string) {
 
-	log.Println("POFDSFDsFdsFdsfdSfdSfDSfDSFds    " + port)
 	// using default setting - include port to make testing on the same host less error prone
 	if root == "" {
 		usr, err := user.Current()
@@ -68,24 +67,6 @@ func setRootPath(root string, port string) {
 		storeRoot = usr.HomeDir + "/grex/store/" + port
 	} else {
 		storeRoot = root
-	}
-
-	// tidy it up and enforce trailing space
-	storeRoot = filepath.Clean(storeRoot) + "/"
-
-	if storeRoot == "//" {
-		log.Fatal("You cant use the root folder for Grex data")
-	}
-
-	log.Println("Debug - store root - " + storeRoot)
-	// ensure the data root folder exists
-	dataRoot = storeRoot + "data/"
-
-	log.Println("Debug - data store - " + dataRoot)
-
-	err := os.MkdirAll(storeRoot, 0750)
-	if err != nil {
-		log.Fatal("Error - cant make root directory")
 	}
 }
 
@@ -152,16 +133,23 @@ func loadConf() error {
 		}
 		confFilePath = storeRoot + "conf/config.json"
 	} else {
+		log.Println("Debug - loading conf file " + confFilePath)
 		var body []byte
 		body, err = ioutil.ReadFile(confFilePath)
 		if err == nil {
 			err = json.Unmarshal(body, &config)
 		}
 	}
+
+	if err != nil {
+		log.Fatal("Error - " + err.Error())
+	}
 	// if we didnt get a config file or if override
 	if err != nil || override {
 		config = *cl // use the command line config
 	}
+
+	println(config.Ports.Bleeter)
 
 	// if we didnt have an existing config - of if we asked to recreate with the overrides..
 	if createConfig || override {
@@ -172,7 +160,34 @@ func loadConf() error {
 		}
 	}
 
+	forceFolders()
+
 	return nil
+}
+
+func forceFolders() {
+	// tidy it up and enforce trailing space
+	storeRoot = filepath.Clean(storeRoot) + "/"
+
+	if storeRoot == "//" {
+		log.Fatal("Fatal - You cant use the root folder for Grex data")
+	}
+
+	if storeRoot == "" {
+		log.Fatal("Fatal - You cant use '' for Grex data")
+	}
+
+	log.Println("Debug - store root - " + storeRoot)
+	// ensure the data root folder exists
+	dataRoot = storeRoot + "data/"
+
+	log.Println("Debug - data store - " + dataRoot)
+
+	// make sure the data root is in place
+	err := os.MkdirAll(dataRoot, 0750)
+	if err != nil {
+		log.Fatal("Error - cant make root directory -" + err.Error())
+	}
 }
 
 func SaveConf() error {

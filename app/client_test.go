@@ -15,6 +15,10 @@ type Xact struct {
 	Date        int64
 }
 
+func (t Xact) Size() int {
+	return 50
+}
+
 type XactList []Xact
 
 type XactTime struct {
@@ -29,6 +33,141 @@ type XactTimeList []XactTime
 // alocated once to remove overhead
 var xactEncoder *gob.Encoder
 var xactBuffer *bytes.Buffer
+
+func Test_PutObj(t *testing.T) {
+	// make sure the cache isnt allocated
+	seshCache = nil
+
+	InitGrex("../testdata", "my.eg.uri", "8888", 10, 0)
+
+	w := Xact{
+		"xact 1",
+		"something",
+		1103,
+		123254326245,
+	}
+
+	msg, err := PutObject("danm", "testobj", w)
+
+	if err != nil {
+		t.Error("error from PutObject", err)
+	}
+	if msg != "good" {
+		t.Error("not got good response from PutObject", msg)
+	}
+
+	xx := Xact{}
+	err = GetObject("danm", "testobj", &xx)
+	if err != nil {
+		t.Error("not got good response from GetObject", err)
+	}
+}
+
+func Test_PutCachedObj(t *testing.T) {
+	// make sure the cache isnt allocated
+	seshCache = nil
+
+	InitGrex("../testdata", "my.eg.uri", "8888", 10, 0)
+
+	w := Xact{
+		"xact 2",
+		"something new",
+		1135,
+		1000054326245,
+	}
+
+	msg, err := PutCachedObject("fanm", "testobj", &w)
+
+	if err != nil {
+		t.Error("error from PutCachedObject", err)
+	}
+	if msg != "good" {
+		t.Error("not got good response from PutCachedObject", msg)
+	}
+
+	y, in := GetItemFromCache("fanm", "testobj")
+
+	if !in {
+		t.Error("cache missing key fanm testobj")
+	}
+
+	if y.(*Xact).Description != "xact 2" {
+		t.Error("cache returned some dodgy stuff")
+	}
+
+	xx := Xact{}
+	newx, err := GetCachedObject("fanm", "testobj", &xx)
+	if err != nil {
+		t.Error("not got good response from GetObject", err)
+	}
+
+	if newx.(*Xact).Description != "xact 2" {
+		t.Error("cache returned some dodgy stuff")
+	}
+
+	// remove object from the cache
+	invalidateItemInCache("fanm", "testobj")
+
+	z, inagain := GetItemFromCache("fanm", "testobj")
+
+	if inagain {
+		t.Error("obj not removed from cache")
+	}
+
+	if z != nil {
+		t.Error("obj not nil so not removed from cache")
+	}
+
+	yx := Xact{}
+
+	err = GetObject("fanm", "testobj", &yx)
+	if err != nil {
+		t.Error("not got good response from GetObject", err)
+	}
+
+	if yx.Description != "xact 2" {
+		t.Error("cache returned some dodgy stuff")
+	}
+
+	yy := Xact{}
+	newy, err := GetCachedObject("fanm", "testobj", &yy)
+	if err != nil {
+		t.Error("not got good response from GetCachedObject", err)
+	}
+
+	if newy.(*Xact).Description != "xact 2" {
+		t.Error("cache returned some dodgy stuff")
+	}
+
+	newz, err := GetCachedObject("fanm", "testobj", &yy)
+	if err != nil {
+		t.Error("not got good response from GetCachedObject", err)
+	}
+
+	if newz.(*Xact).Description != "xact 2" {
+		t.Error("cache returned some dodgy stuff")
+	}
+
+	// msg, err = PutCachedObject("fanm", "testobj", w)
+
+}
+
+func Test_GetCachedMissingObj(t *testing.T) {
+	// make sure the cache isnt allocated
+	seshCache = nil
+
+	InitGrex("../testdata", "my.eg.uri", "8888", 10, 0)
+
+	yy := Xact{}
+	newy, err := GetCachedObject("xxanm", "testobj", &yy)
+	if err == nil {
+		t.Error("Should have gor an error")
+	}
+
+	if newy.(*Xact).Description != "" {
+		t.Error("cache returned some dodgy stuff")
+	}
+}
 
 func makeSomeXacts(incrementDate bool) *XactList {
 	x1 := Xact{
