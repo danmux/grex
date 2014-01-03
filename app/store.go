@@ -84,7 +84,7 @@ func GetBytes(key string, itemKey string) (*BlobArg, error) {
 	imHerding, othersHerding := getHerdersForBucket(key, true)
 	if !imHerding && len(othersHerding) == 0 {
 		reply.Message = "critical"
-		return reply, errors.New("No nodes registered for this bucket: " + key)
+		return reply, errors.New("Get - No nodes registered for this bucket: " + key)
 	}
 
 	// the consistancy flag
@@ -128,15 +128,14 @@ func GetBytes(key string, itemKey string) (*BlobArg, error) {
 	// synchronously try each node that have the highest version numbers in turn - until one succeeds
 	// TODO - prioritise quiet nodes
 	if uptoDateUrls != nil {
-		log.Println("got some others")
 		for _, nodeUrl := range *uptoDateUrls {
 
-			log.Println("trying " + nodeUrl)
+			log.Println("Debug - trying " + nodeUrl)
 
 			conn, err := GetConnection(nodeUrl)
 			if err != nil {
 				errorCount++
-				log.Println("Error - failed to get connection for: " + nodeUrl)
+				log.Println("Error - Get first up to date url - failed to get connection for: " + nodeUrl)
 			} else {
 
 				err = conn.Client.Call("Bleets.GetBlob", args, reply)
@@ -193,7 +192,7 @@ func PostBytes(key string, itemKey string, data *([]byte)) (string, error) {
 	imHerding, othersHerding := getHerdersForBucket(key, true)
 
 	if !imHerding && len(othersHerding) == 0 {
-		return "critical", errors.New("No nodes registered for this bucket " + key)
+		return "critical", errors.New("Post - No nodes registered for this bucket " + key)
 	}
 
 	// how many nodes did not accept the blob
@@ -236,7 +235,7 @@ func PostBytes(key string, itemKey string, data *([]byte)) (string, error) {
 		cons[ix], err = GetConnection(nodeUrl)
 		if err != nil {
 			errorCount++
-			log.Println("Error - failed to get connection for: " + nodeUrl)
+			log.Println("Error - Posting to peers failed to get connection for: " + nodeUrl)
 		} else {
 			go func(i int) {
 				err := cons[i].Client.Call("Bleets.PutBlob", args, &res[i])

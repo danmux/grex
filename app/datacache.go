@@ -7,8 +7,8 @@ import (
 	"ext/vitesse/cache"
 )
 
-// versions stored in single file per bucket - each bucket has an item hash with version numbers
-var itemCache *cache.LRUCache // the lru of bucket versions
+// an LRU cache for bucket items
+var itemCache *cache.LRUCache
 
 func initialiseItemCache(size int64) {
 	itemCache = cache.NewLRUCache(size)

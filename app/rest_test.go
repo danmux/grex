@@ -59,15 +59,15 @@ func Test_FldTidy(t *testing.T) { //test function starts with "Test" and takes a
 }
 
 func Test_KeyTidy(t *testing.T) { //test function starts with "Test" and takes a pointer to type testing.T
-	if TidyKey("  ffdfs df   ff  FGG  ") != "ffdfs-df-ff-fgg" {
+	if TidyKey("  ffdfs df   ff  FGG  ") != "ffdfs_df_ff_fgg" {
 		t.Error("key tidy didnt tidy >" + TidyKey("  ffdfs df   ff  FGG  "))
 	}
 
-	if TidyKey("  aaA შოთ Aaa") != "aaa-aaa" {
+	if TidyKey("  aaA შოთ Aaa") != "aaa_aaa" {
 		t.Error("key tidy didnt tidy >" + TidyKey("  aaA შოთ Aaa"))
 	}
 
-	if TidyKey("  aaA შოთ Bშოთaa") != "aaa-baa" {
+	if TidyKey("  aaA შოთ Bშოთaa") != "aaa_baa" {
 		t.Error("key tidy didnt tidy >" + TidyKey("  aaA შოთ Aaa"))
 	}
 }

@@ -169,6 +169,56 @@ func Test_GetCachedMissingObj(t *testing.T) {
 	}
 }
 
+func Test_PutCachedIndexObj(t *testing.T) {
+	// make sure the cache isnt allocated
+	seshCache = nil
+
+	InitGrex("../testdata", "my.eg.uri", "8888", 10, 0)
+
+	w := Xact{
+		"xact indexed",
+		"something new",
+		1135,
+		1000054326245,
+	}
+
+	ResetIndexes("fanm", "ixact")
+
+	msg, err := PostIndexedObject("fanm", "ixact", &w)
+
+	if err != nil {
+		t.Error("error from PutCachedObject", err)
+	}
+	if msg != "good" {
+		t.Error("not got good response from PutCachedObject", msg)
+	}
+
+	yy := Xact{}
+	x, err := GetIndexedObject("fanm", "ixact", 1, &yy)
+	xx := x.(*Xact)
+
+	if err != nil {
+		t.Error("summink wrong getindexobj", err)
+	}
+	if xx.Description != w.Description {
+		t.Error("indexed files are fucked", xx.Description)
+	}
+
+	names, err := GetIndexKeys("fanm", "ixact")
+
+	if err != nil {
+		t.Error("summink wrong getindexkeys", err)
+	}
+
+	if len(names) != 1 {
+		t.Fatal("indexed keys are wrong", len(names))
+	}
+	if names[0] != 1 {
+		t.Error("indexed keys are missing", names[0])
+	}
+
+}
+
 func makeSomeXacts(incrementDate bool) *XactList {
 	x1 := Xact{
 		Description: "My very first description",

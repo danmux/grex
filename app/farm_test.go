@@ -81,10 +81,6 @@ func Test_AddNodeToFlock(t *testing.T) {
 		t.Error(err)
 	}
 
-	if farm.Farm["ab"][1].Node.Url != "testurl 3" {
-		t.Error("flock 'ab' node 0 has wrong node index")
-	}
-
 	err = AddNodeToFlock("testurl 3", "ab", true)
 	if err == nil {
 		t.Error("Same node added to flock more than once")
@@ -97,10 +93,6 @@ func Test_AddNodeToFlock(t *testing.T) {
 
 	// add a new node to the ab flock
 	err = AddNodeToFlock("testurl X", "ab", true)
-
-	if farm.Farm["ab"][2].Node.Url != "testurl X" {
-		t.Error("flock 1 has wrong node")
-	}
 
 	// for k, fl := range farm.Farm {
 	// 	t.Log(k)

@@ -30,7 +30,7 @@ Data stored in buckets based on primary bucket key, and item sub-keys within a b
 
 Each item within a bucket is just binary data - a (byte array) - but its expected that your app will gob encode and decode the binary data.
 
-Groups of buckets are organised into 'flocks' by some computed grouping based on the bucket key - e.g. first two characters of the bucket key - a flock is the smallest division that a node can redistribute round the cluster
+Groups of buckets are organised into 'flocks' by some computed grouping - a flock is the smallest division that a node can redistribute round the cluster - i was using first two characters of the bucket key - but (using the snapchat usernames as test data) the distribution sucked so now its 10 bits of golangs inbuilt fnv1a hash - much better balanced
 
 A node will be responsible for its copy of a flock, and may herd all flocks or a subset - the set of flocks that a node is responsible for (herding) is called its 'farm'
 

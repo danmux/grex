@@ -1,10 +1,10 @@
 package app
 
-// version - maintains the version cache all buckets have a .versions file that keeps track of versoions of 
+// version - maintains the version cache all buckets have a .versions file that keeps track of versoions of
 //           all keys in the bucket - all writes update the file on disk and ripples it across any herder node
 //           updating thier versions.
 // 			 versions works hand in hand withe the store...
-//           A read of the version file will only attempt to get the version from cache or the local disk - not the cluster.  
+//           A read of the version file will only attempt to get the version from cache or the local disk - not the cluster.
 //           the data reads themselves (from the store) will have contacted all herders to check their versions.
 //           and updated the local copy to the latest version if needed.
 
@@ -96,7 +96,7 @@ func dePersistBucketVersion(bv *bucketVersion) error {
 		Message: "",
 	}
 	err := getData(&blob)
-	// no file 
+	// no file
 	if err != nil {
 		bv.itemVersions = make(map[string]uint64)
 		return nil
@@ -112,15 +112,21 @@ func dePersistBucketVersion(bv *bucketVersion) error {
 }
 
 // put it in the cache and persist it to disk
-func putBucketVersion(bv *bucketVersion) chan error {
+func putBucketVersion(bv *bucketVersion) {
+	// bucketItemVCache.Set(bv.bucketKey, bv.itemVersions)
+
+	// ch := make(chan error)
+	// go func(ibv *bucketVersion, ich chan error) {
+	// 	err := persistBucketVersion(ibv)
+	// 	ich <- err
+	// }(bv, ch)
+	// return ch
+
 	bucketItemVCache.Set(bv.bucketKey, bv.itemVersions)
 
-	ch := make(chan error)
-	go func(ibv *bucketVersion, ich chan error) {
-		err := persistBucketVersion(ibv)
-		ich <- err
-	}(bv, ch)
-	return ch
+	go func(ibv *bucketVersion) {
+		persistBucketVersion(ibv)
+	}(bv)
 }
 
 // return the version map for the bucket - from our version cache first and foremost

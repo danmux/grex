@@ -1,8 +1,11 @@
 package app
 
 import (
+	"bytes"
+	"encoding/json"
 	"errors"
 	"ext/go-json-rest"
+	"io/ioutil"
 	"net/http"
 	"regexp"
 	"strings"
@@ -13,6 +16,15 @@ import (
 // interface for all inbound json payloads
 type GeneralRequest interface {
 	Token() string
+}
+
+// a minimal request body - perjhaps for authenticated get requests
+type MinRequest struct {
+	Key string `json:"token"`
+}
+
+func (a MinRequest) Token() string {
+	return a.Key
 }
 
 // standard response wrapper
@@ -46,7 +58,7 @@ func TidyEmail(fld string) string {
 	return strings.ToLower(strings.Replace(fld, " ", "", -1))
 }
 
-func RemoveUtf8AndultipleSpaces(fld string) string {
+func RemoveUtf8AndMultipleSpaces(fld string) string {
 	bits := []string{}
 	for _, s := range strings.Split(fld, " ") {
 		s = noneAlphaNum.ReplaceAllString(s, "")
@@ -60,8 +72,10 @@ func RemoveUtf8AndultipleSpaces(fld string) string {
 
 // remove multiple spaces, lower case it, strip leading and trailing, and replace single spaces with '-'
 func TidyKey(fld string) string {
+	fld = strings.Replace(fld, ".", "_", -1)
+	fld = strings.Replace(fld, "-", "_", -1)
 
-	return strings.TrimSpace(strings.ToLower(strings.Replace(RemoveUtf8AndultipleSpaces(fld), " ", "-", -1)))
+	return strings.TrimSpace(strings.ToLower(strings.Replace(RemoveUtf8AndMultipleSpaces(fld), " ", "_", -1)))
 }
 
 func TidyInput(fld string) string {
@@ -121,4 +135,36 @@ func PrepRequest(req *rest.Request, obj GeneralRequest, needAuth bool) (*Sesh, i
 	}
 
 	return sesh, 200, nil
+}
+
+func RestPost(url string, obj interface{}, repl interface{}) error {
+	b, err := json.Marshal(obj)
+	if err != nil {
+		return err
+	} else {
+
+		body := bytes.NewBuffer(b)
+
+		resp, err := http.Post(url, "application/json", body)
+
+		if err != nil {
+			return err
+		} else {
+			defer resp.Body.Close()
+			if repl != nil {
+
+				content, err := ioutil.ReadAll(resp.Body)
+
+				if err != nil {
+					return err
+				} else {
+					err := json.Unmarshal(content, repl)
+					if err != nil {
+						return err
+					}
+				}
+			}
+		}
+	}
+	return nil
 }

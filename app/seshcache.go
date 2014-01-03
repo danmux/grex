@@ -102,7 +102,7 @@ func PutSeshInCache(sesh *Sesh) error {
 	// and send it to all herding nodes
 	for _, nodeUrl := range seshServersUrls {
 		if err != nil {
-			log.Println("Error - failed to get connection for: " + nodeUrl)
+			log.Println("Error - PutSeshInCache failed to get connection for: " + nodeUrl)
 		} else {
 			go func(url string) {
 
@@ -168,13 +168,19 @@ func GetSeshFromCache(seshKey string) (*Sesh, bool, error) {
 			}
 		}
 
+		if firstSesh == nil {
+			log.Println("Warning - got no session for this key")
+			return nil, false, nil
+		}
+
 		if firstSesh.Key == "" {
 			log.Println("Warning - got no session for this key")
-		} else {
-			// stick it in our local cach
-			persistInCache(firstSesh)
-			return firstSesh, true, nil
+			return nil, false, nil
 		}
+
+		// stick it in our local cach
+		persistInCache(firstSesh)
+		return firstSesh, true, nil
 
 	}
 	return nil, false, nil

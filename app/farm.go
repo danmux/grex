@@ -4,18 +4,20 @@ package app
 
 import (
 	"errors"
+	"fmt"
+	"hash/fnv"
 	"log"
 )
 
-// the maximum number of nodes in the cluster 
+// the maximum number of nodes in the cluster
 // Arbitrarily set to the same number of flocks in the two character flocking system
 const MAX_NODES = 1296
 
 // Each flock can have at most 10 replicas
 const MAX_REPLICAS = 10
 
-// The set of allowable characters in any key
-const KEY_CHARS = "01234567890abcdefghijklmnopqrstuvwxyz"
+// The set of allowable characters in any key - to enforce reasonable file names
+const KEY_CHARS = "0123456789abcdefghijklmnopqrstuvwxyz_"
 
 // a farm has a list of these known nodes
 type NodeStatus struct {
@@ -40,7 +42,7 @@ type FlockStatus struct {
 // array (rather than linked list as modes rarely added or removed)
 type nodeList []FlockStatus
 
-// The nodeMap contains the 
+// The nodeMap contains the
 type nodeMap struct {
 	MyUri string
 
@@ -59,11 +61,6 @@ func Farm() *nodeMap {
 // return the uri for this node
 func MyUri() string {
 	return farm.MyUri
-}
-
-// this is the flock key algorithm - default simply the first two characters of the bucket key
-func getFlockKey(bucketKey string) string {
-	return bucketKey[0:2]
 }
 
 // for a given bucket return whether the current node is herding it and a list of other node urls that are herding it as well
@@ -91,7 +88,7 @@ func getHerdersForBucket(bucketKey string, allowPartialHerding bool) (bool, []st
 	return iCare, herders
 }
 
-// Register that a Node with given uri is herding / or not a particular flock 
+// Register that a Node with given uri is herding / or not a particular flock
 func AddNodeToFlock(uri string, flockKey string, herder bool) error {
 	// check the Node exists in our list
 	nodeStat, in := farm.NodeIds[uri]
@@ -174,8 +171,46 @@ func markNodeUpOrDown(url string, upOrDown bool) {
 	}
 }
 
-// load the farm with all possible flocks using the first two chars of the key method
+func LocalNodeStatus() *NodeStatus {
+	return farm.localNode
+}
+
+// --------------- the flocking algorithms ----------------
+
+//  --- the new 1024 bits of a hash flocks
+const MAX_FLOCKS = 1024
+
 func SetupDefaultFlocks() {
+	for i := 0; i < MAX_FLOCKS; i++ {
+		AddNodeToFlock(MyUri(), fmt.Sprintf("%03d", i), true)
+	}
+}
+
+// this is the flock key algorithm - 10 (1024 buckets) bits of the fnv hash of the bucket key
+var hashFlk = fnv.New32a()
+
+func hashFlock(key string) uint32 {
+	hashFlk.Reset()
+
+	_, error := hashFlk.Write([]byte(key))
+	if error != nil {
+		println(error.Error())
+		panic("User hashFlk error")
+	}
+
+	done := hashFlk.Sum32()
+
+	return done & 0x3ff
+}
+
+func getFlockKey(bucketKey string) string {
+	return fmt.Sprintf("%03d", hashFlock(bucketKey))
+}
+
+// ---------- The original (and depricated) two character flocking based on allowable key characters-----------
+
+// load the farm with all possible flocks using the first two chars of the key method
+func SetupDefaultFlocksOrig() {
 	for _, c1 := range KEY_CHARS {
 		for _, c2 := range KEY_CHARS {
 			herd := true
@@ -184,6 +219,6 @@ func SetupDefaultFlocks() {
 	}
 }
 
-func LocalNodeStatus() *NodeStatus {
-	return farm.localNode
+func getFlockKeyOrig(bucketKey string) string {
+	return bucketKey[0:2]
 }
