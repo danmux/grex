@@ -94,14 +94,15 @@ func getKey(req *rest.Request) (string, bool) {
 // given a request and general payload and if check authorisation
 // find a session token(key) in the url or payload return a session, and http code and error
 func PrepRequest(req *rest.Request, obj GeneralRequest, needAuth bool) (*Sesh, int, error) {
-	key, in := getKey(req)
+
+	plToken := ""
 
 	err := req.DecodeJsonPayload(obj)
-	if err != nil {
-		return nil, http.StatusBadRequest, err
+	if err == nil {
+		plToken = obj.Token()
 	}
 
-	plToken := obj.Token()
+	key, in := getKey(req)
 	if in {
 		if plToken != "" {
 			if plToken != key {
@@ -110,6 +111,10 @@ func PrepRequest(req *rest.Request, obj GeneralRequest, needAuth bool) (*Sesh, i
 		}
 	} else {
 		key = plToken
+	}
+
+	if key == "" {
+		return nil, http.StatusBadRequest, errors.New("No key found in the session")
 	}
 
 	sesh, found, err := GetSeshFromCache(key)
