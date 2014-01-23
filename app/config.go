@@ -150,7 +150,7 @@ func loadConf() error {
 		config = *cl // use the command line config
 	}
 
-	println(config.Ports.Bleeter)
+	log.Println("Debug - Bleeting on", config.Ports.Bleeter)
 
 	// if we didnt have an existing config - of if we asked to recreate with the overrides..
 	if createConfig || override {
@@ -160,8 +160,6 @@ func loadConf() error {
 			log.Println("Error - saving config - " + err.Error())
 		}
 	}
-
-	forceFolders()
 
 	return nil
 }
