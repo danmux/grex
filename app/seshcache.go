@@ -161,7 +161,7 @@ func GetSeshFromCache(seshKey string) (*Sesh, bool, error) {
 		var firstSesh *Sesh
 		// loop round and get first none null session
 		for i := 0; i < len(seshServersUrls); i++ {
-			// wait for first one back 
+			// wait for first one back
 			firstSesh = <-sem
 			if firstSesh != nil {
 				break
@@ -169,12 +169,12 @@ func GetSeshFromCache(seshKey string) (*Sesh, bool, error) {
 		}
 
 		if firstSesh == nil {
-			log.Println("Warning - got no session for this key")
+			log.Println("Warning - got no session container for this key")
 			return nil, false, nil
 		}
 
 		if firstSesh.Key == "" {
-			log.Println("Warning - got no session for this key")
+			log.Println("Warning - got no session key for this key")
 			return nil, false, nil
 		}
 

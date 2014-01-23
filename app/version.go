@@ -14,6 +14,7 @@ import (
 	"encoding/gob"
 	"ext/vitesse/cache"
 	"log"
+	"sync"
 )
 
 // allows up to 18446744073709551615 versions - one write per millisecond - 585 million years
@@ -29,6 +30,7 @@ func (i itemVersionMap) Size() int {
 type bucketVersion struct {
 	bucketKey    string
 	itemVersions itemVersionMap
+	mu           sync.Mutex // synchronise any writes of this
 }
 
 func (b *bucketVersion) incVersion(itemKey string) {
@@ -74,6 +76,8 @@ func resetBucketVersion(bucketKey string) error {
 
 // write it to disk
 func persistBucketVersion(bv *bucketVersion) error {
+	bv.mu.Lock()
+
 	m := new(bytes.Buffer)
 	enc := gob.NewEncoder(m)
 	enc.Encode(bv.itemVersions) // just the map
@@ -85,7 +89,10 @@ func persistBucketVersion(bv *bucketVersion) error {
 		Payload: m.Bytes(),
 	}
 
-	return putData(&blob)
+	err := putData(&blob)
+
+	bv.mu.Unlock()
+	return err
 }
 
 func dePersistBucketVersion(bv *bucketVersion) error {
@@ -122,6 +129,7 @@ func putBucketVersion(bv *bucketVersion) {
 	// }(bv, ch)
 	// return ch
 
+	log.Println("Debug - Putting version meta in cache - " + bv.bucketKey)
 	bucketItemVCache.Set(bv.bucketKey, bv.itemVersions)
 
 	go func(ibv *bucketVersion) {

@@ -24,6 +24,7 @@ type NodeStatus struct {
 	Url        string
 	Up         bool
 	SeshServer bool // is it a session server
+	ClientOnly bool // is it a client connected node - in that it cares not for storing data
 	Local      bool // is this the local node
 }
 
@@ -124,7 +125,7 @@ func AddNodeToFlock(uri string, flockKey string, herder bool) error {
 
 // Add a node uri to the node lookups
 // returns the new node status, and if it is new
-func AddNode(uri string, up bool, sesh bool) (*NodeStatus, bool, error) {
+func AddNode(uri string, up bool, sesh bool, client bool) (*NodeStatus, bool, error) {
 
 	// got this one already
 	nodeStat, in := farm.NodeIds[uri]
@@ -138,7 +139,7 @@ func AddNode(uri string, up bool, sesh bool) (*NodeStatus, bool, error) {
 	}
 
 	// otherwise make a new node and add it to the list
-	newNode := NodeStatus{uri, up, sesh, false}
+	newNode := NodeStatus{uri, up, sesh, client, false}
 	// and our per uri node status lookup
 	farm.NodeIds[uri] = &newNode
 	return &newNode, true, nil
@@ -146,14 +147,17 @@ func AddNode(uri string, up bool, sesh bool) (*NodeStatus, bool, error) {
 
 func addExternalFarm(url string, newfarm *SingleNodeFarm) {
 	for k, f := range newfarm.Flocks {
-		AddNodeToFlock(url, k, f.Herder)
+		// dont bother adding external nodes that dont herd
+		if f.Herder {
+			AddNodeToFlock(url, k, true)
+		}
 	}
 }
 
 // for any nodes found in the recently acquired nodelist if they are new then get that nodes farm status as well
 func addExternalNodes(newNodes *NodeList) {
 	for _, f := range newNodes.Nodes {
-		_, isNew, err := AddNode(f.Url, f.Up, f.SeshServer)
+		_, isNew, err := AddNode(f.Url, f.Up, f.SeshServer, f.ClientOnly)
 		if err == nil {
 			// any new nodes go and get the farm status
 			if isNew {
@@ -180,9 +184,9 @@ func LocalNodeStatus() *NodeStatus {
 //  --- the new 1024 bits of a hash flocks
 const MAX_FLOCKS = 1024
 
-func SetupDefaultFlocks() {
+func SetupDefaultFlocks(clientOnly bool) {
 	for i := 0; i < MAX_FLOCKS; i++ {
-		AddNodeToFlock(MyUri(), fmt.Sprintf("%03d", i), true)
+		AddNodeToFlock(MyUri(), fmt.Sprintf("%03d", i), !clientOnly)
 	}
 }
 

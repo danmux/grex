@@ -1,6 +1,6 @@
 package app
 
-//bleet - interprocess communication 
+//bleet - interprocess communication
 
 import (
 	"errors"
@@ -15,7 +15,7 @@ type Bleets struct{}
 // all the bleet listening functions
 //----------------------------------
 
-// remote has requested some local data 
+// remote has requested some local data
 func (t *Bleets) GetBlob(request *BlobArg, response *BlobArg) error {
 	response.Key = request.Key
 	response.SubKey = request.SubKey
@@ -46,7 +46,7 @@ func (t *Bleets) GetVersion(item *Key, response *uint64) error {
 	return nil
 }
 
-// remote is asking us if we have the specified session 
+// remote is asking us if we have the specified session
 func (t *Bleets) GetSession(key *string, response *Sesh) error {
 
 	// first lets make sure we had our cache initialised
@@ -93,6 +93,7 @@ type SingleNodeFarm struct {
 // Rpc call to share a nodes individual farm information
 // request is the url of the requesting node
 func (t *Bleets) GetFarm(request string, response *SingleNodeFarm) error {
+	log.Println("Debug - Ive been asked for my farm", request)
 	response.IsSessionServer = seshCache != nil
 	response.Flocks = make(map[string]FlockStatus)
 	for k, fl := range farm.Farm {
@@ -103,7 +104,15 @@ func (t *Bleets) GetFarm(request string, response *SingleNodeFarm) error {
 	// ad the requesting node - and if it is new then request thier farm
 	_, in := farm.NodeIds[request]
 	if !in {
-		tellFarm(request)
+		go func() {
+			log.Println("Debug - a new node just asked for my farm, so Im requesting their nodes", request)
+			err := tellNodes(request)
+			if err != nil {
+				return
+			}
+			log.Println("Debug - and I'm requesting their farm", request)
+			tellFarm(request)
+		}()
 	}
 
 	return nil
@@ -120,15 +129,19 @@ func (t *Bleets) GetNodes(request *NodeStatus, response *NodeList) error {
 	response.Nodes = farm.NodeIds
 
 	// ad the requesting node - and if it is new then request thier farm
-	_, isNew, err := AddNode(request.Url, request.Up, request.SeshServer)
+	_, isNew, err := AddNode(request.Url, request.Up, request.SeshServer, request.ClientOnly)
 	if err != nil {
 		return err
 	} else if isNew {
-		err := tellNodes(request.Url)
-		if err != nil {
-			return err
-		}
-		return tellFarm(request.Url)
+		go func() {
+			log.Println("Debug - a new node just asked for the nodes I know about, so Im requesting their nodes", request.Url)
+			err := tellNodes(request.Url)
+			if err != nil {
+				return
+			}
+			log.Println("Debug - and I'm requesting their farm", request.Url)
+			tellFarm(request.Url)
+		}()
 	} else {
 		// we have it so lets make sure we know its up
 		markNodeUpOrDown(request.Url, true)
@@ -163,6 +176,7 @@ func tellFarm(url string) error {
 
 	var reply SingleNodeFarm
 
+	log.Println("Debug - Asking a node for their farm:", url)
 	err = conn.Client.Call("Bleets.GetFarm", caller, &reply)
 	conn.InUse = false
 
@@ -171,7 +185,8 @@ func tellFarm(url string) error {
 		return err
 	}
 
-	log.Println("got a good farm response from : " + url)
+	log.Println("Debug - Got a good farm response from : " + url)
+
 	// add this to our farm
 	addExternalFarm(url, &reply)
 
@@ -180,6 +195,7 @@ func tellFarm(url string) error {
 
 // oi you at the end of this url tell me all the nodes you are ware of
 func tellNodes(url string) error {
+	log.Println("Debug - tellNodes - calls GetNodes from remote:" + url)
 	conn, err := GetConnection(url)
 	if err != nil {
 		return err
@@ -201,8 +217,8 @@ func tellNodes(url string) error {
 		return err
 	}
 
-	log.Println("got a good GetNodes response from : " + url)
-	// add these external nodes - if the node is new a tellFarm will be triggered on the node as well 
+	log.Println("Debug - got a good GetNodes response from : " + url)
+	// add these external nodes - if the node is new a tellFarm will be triggered on the node as well
 	addExternalNodes(&reply)
 
 	return nil

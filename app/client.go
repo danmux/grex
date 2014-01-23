@@ -12,7 +12,7 @@ import (
 
 type BlobObj interface{}
 
-// recover from the cluster into obj the object at key, itemkey 
+// recover from the cluster into obj the object at key, itemkey
 func GetObject(key string, itemKey string, obj BlobObj) error {
 
 	dec, err := GetLoadedDecoder(key, itemKey)
@@ -107,27 +107,23 @@ func updateIndex(key string, itemKey string, index int) (int, string, error) {
 	return ix.Index, str, err
 }
 
-func PostIndexedObject(key string, itemKey string, obj cache.Value) (string, error) {
+func PostIndexedObject(key string, itemKey string, obj cache.Value) (int, string, error) {
 
 	index, msg, err := updateIndex(key, itemKey, 0)
 	if msg == "critical" {
-		return msg, err
+		return 0, msg, err
 	}
 
 	fn := indexedFileName(itemKey, index)
 
 	// put the object
-	return PutCachedObject(key, fn, obj)
+	mes, err := PutCachedObject(key, fn, obj)
+	return index, mes, err
 }
 
 func PutIndexedObject(key string, itemKey string, index int, obj cache.Value) (string, error) {
 
-	ix, msg, err := updateIndex(key, itemKey, index)
-	if msg == "critical" {
-		return msg, err
-	}
-
-	fn := indexedFileName(itemKey, ix)
+	fn := indexedFileName(itemKey, index)
 
 	// put the object
 	return PutCachedObject(key, fn, obj)
@@ -161,7 +157,7 @@ func ResetIndexes(key string, itemKey string) error {
 	return deleteData(&blob)
 }
 
-// Return a GOB decoder primed wiht the bytes for a given key and subkey 
+// Return a GOB decoder primed wiht the bytes for a given key and subkey
 func GetLoadedDecoder(key string, subkey string) (*gob.Decoder, error) {
 	reply, err := GetBytes(key, subkey)
 
@@ -171,7 +167,7 @@ func GetLoadedDecoder(key string, subkey string) (*gob.Decoder, error) {
 
 	p := bytes.NewBuffer(reply.Payload)
 	//bytes.Buffer satisfies the interface for io.Writer and can be used
-	//in gob.NewDecoder() 
+	//in gob.NewDecoder()
 	return gob.NewDecoder(p), nil
 }
 
@@ -180,7 +176,7 @@ func GetBufferEncoder() (*gob.Encoder, *bytes.Buffer) {
 	// some optimisations for bulk data would be to prealocate the buffer and cache the encoder
 	m := new(bytes.Buffer)
 	//the *bytes.Buffer satisfies the io.Writer interface and can
-	//be used in gob.NewEncoder() 
+	//be used in gob.NewEncoder()
 	enc := gob.NewEncoder(m)
 
 	return enc, m

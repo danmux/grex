@@ -184,7 +184,7 @@ func Test_PutCachedIndexObj(t *testing.T) {
 
 	ResetIndexes("fanm", "ixact")
 
-	msg, err := PostIndexedObject("fanm", "ixact", &w)
+	_, msg, err := PostIndexedObject("fanm", "ixact", &w)
 
 	if err != nil {
 		t.Error("error from PutCachedObject", err)

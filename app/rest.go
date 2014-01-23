@@ -71,6 +71,7 @@ func RemoveUtf8AndMultipleSpaces(fld string) string {
 }
 
 // remove multiple spaces, lower case it, strip leading and trailing, and replace single spaces with '-'
+// replace - and . with _
 func TidyKey(fld string) string {
 	fld = strings.Replace(fld, ".", "_", -1)
 	fld = strings.Replace(fld, "-", "_", -1)

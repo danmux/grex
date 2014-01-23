@@ -43,7 +43,7 @@ func InitGrex(storeRootLoc string, uri string, port string, pond int, sesh int64
 	farm.Farm = make(map[string]nodeList)
 
 	// add me to the Lookups and map, im up and i might be a session server
-	localNode, isNew, err := AddNode(farm.MyUri, true, sesh > 0)
+	localNode, isNew, err := AddNode(farm.MyUri, true, sesh > 0, config.ClientOnly)
 	// we cant have any errors adding the local node
 	if err != nil {
 		log.Panic(err)
@@ -71,8 +71,10 @@ func InitGrex(storeRootLoc string, uri string, port string, pond int, sesh int64
 
 	log.Println("Debug - Local node: ", LocalNodeStatus())
 
-	// in future these will come from the config files 
-	SetupDefaultFlocks()
+	log.Println("Debug - Client only: ", config.ClientOnly)
+
+	// in future these will come from the config files
+	SetupDefaultFlocks(config.ClientOnly)
 }
 
 // start serving our bleet server - and find out all other nodes from the seed list
@@ -82,6 +84,7 @@ func StartServing(bleetAddy string, restAddy string, seedUrls []string) {
 
 	// try the seed uris for lists of nodes
 	for _, s := range seedUrls {
+		log.Println("Debug - querying seeds for their nodes", s)
 		err := tellNodes(s)
 		if err != nil {
 			log.Println("Error - " + err.Error())

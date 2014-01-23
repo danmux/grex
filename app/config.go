@@ -19,7 +19,7 @@ type Ports struct {
 }
 
 type Config struct {
-	InternalName  string   `json:"internal_ip"` // the internal ip to bind to for bleeting 
+	InternalName  string   `json:"internal_ip"` // the internal ip to bind to for bleeting
 	ExternalName  string   `json:"external_ip"` // external for the rest interfaces
 	Ports         Ports    `json:"ports"`
 	Seeds         []string `json:"seeds"`           // the peer servers in this cluster
@@ -27,6 +27,7 @@ type Config struct {
 	PondSize      int      `json:"pond_size"`       // how big the pond is per node
 	SeshCacheSize int64    `json:"sesh_cache_size"` // how big the session cache size - number of sessions
 	DataCacheSize int64    `json:"data_cache_size"` // how big the data cache size is - number of items (of average size)
+	ClientOnly    bool     `json:"client_only"`     // default false, but is true then it wont flock any data
 }
 
 var config Config

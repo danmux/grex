@@ -17,7 +17,7 @@ type UrlAndVer struct {
 	ver uint64
 }
 
-// for all herders contact them in parallel to get the versions return the  
+// for all herders contact them in parallel to get the versions return the
 func getRemoteVersions(herders []string, key string, itemKey string) (uint64, *([]string)) {
 
 	N := len(herders)
@@ -100,7 +100,7 @@ func GetBytes(key string, itemKey string) (*BlobArg, error) {
 	if imHerding {
 		log.Println("Debug - im herding :" + key)
 
-		// first check local version if it is less than the max remote versions 
+		// first check local version if it is less than the max remote versions
 		// then get dont get this now - and set the should repair flag - so we persist the latest version locally
 		bv = getBucketVersion(key)
 		myVer := bv.getVersion(itemKey)
@@ -109,7 +109,7 @@ func GetBytes(key string, itemKey string) (*BlobArg, error) {
 			log.Println("Warning - No remotes to query or no remote data, hence potentialy vulnerable data")
 		}
 		if myVer < maxRemoteVersion {
-			log.Printf("local inconsistant with version %d remotes as %d\n", myVer, maxRemoteVersion)
+			log.Printf("Warning - Read Repair - local inconsistant with version %d remotes as %d\n", myVer, maxRemoteVersion)
 			imInconsistant = true
 		} else {
 			log.Println("Debug - local version is latest")
@@ -149,7 +149,7 @@ func GetBytes(key string, itemKey string) (*BlobArg, error) {
 
 					// so if our node was not consistant then save this file and version
 					if imInconsistant {
-						log.Printf("Got inconsistant local version - so updating to remote version %d", maxRemoteVersion)
+						log.Printf("Debug - ReadRepair - Got inconsistant local version - so updating to remote version %d", maxRemoteVersion)
 						bv.setVersion(itemKey, maxRemoteVersion)
 						putBucketVersion(bv)
 						putData(reply)
@@ -184,7 +184,7 @@ func GetBytes(key string, itemKey string) (*BlobArg, error) {
 	return reply, nil
 }
 
-// get current version from version cache, up the version persist version and persist the data, 
+// get current version from version cache, up the version persist version and persist the data,
 //   both locally and on any herding nodes
 func PostBytes(key string, itemKey string, data *([]byte)) (string, error) {
 
@@ -227,7 +227,7 @@ func PostBytes(key string, itemKey string, data *([]byte)) (string, error) {
 	sem := make(chan int)
 	// store the results
 	res := make([]BlobArg, N)
-	// sore our connections so we can return them to the pond  
+	// sore our connections so we can return them to the pond
 	cons := make([]*connection, N)
 
 	// and send it to all herding nodes
