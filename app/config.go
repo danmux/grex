@@ -65,7 +65,7 @@ func setRootPath(root string, port string) {
 		if err != nil {
 			log.Fatal(err)
 		}
-		storeRoot = usr.HomeDir + "/grex/store/" + port
+		storeRoot = usr.HomeDir + "/grex/store/" + port + "/"
 	} else {
 		storeRoot = root
 	}
