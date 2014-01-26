@@ -28,6 +28,8 @@ type Config struct {
 	SeshCacheSize int64    `json:"sesh_cache_size"` // how big the session cache size - number of sessions
 	DataCacheSize int64    `json:"data_cache_size"` // how big the data cache size is - number of items (of average size)
 	ClientOnly    bool     `json:"client_only"`     // default false, but is true then it wont flock any data
+
+	Application interface{} `json:"application"` // any specific application config
 }
 
 var config Config
@@ -187,6 +189,10 @@ func forceFolders() {
 	if err != nil {
 		log.Fatal("Error - cant make root directory -" + err.Error())
 	}
+}
+
+func GetAppConf() interface{} {
+	return config.Application
 }
 
 func SaveConf() error {
