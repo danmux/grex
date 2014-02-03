@@ -143,34 +143,40 @@ func PrepRequest(req *rest.Request, obj GeneralRequest, needAuth bool) (*Sesh, i
 	return sesh, 200, nil
 }
 
+// utility function to post outbound request somewhere
 func RestPost(url string, obj interface{}, repl interface{}) error {
 	b, err := json.Marshal(obj)
 	if err != nil {
 		return err
+	}
+
+	body := bytes.NewBuffer(b)
+
+	return RestPostString(url, body, repl)
+}
+
+func RestPostString(url string, body *bytes.Buffer, repl interface{}) error {
+
+	resp, err := http.Post(url, "application/json", body)
+
+	if err != nil {
+		return err
 	} else {
+		defer resp.Body.Close()
+		if repl != nil {
 
-		body := bytes.NewBuffer(b)
+			content, err := ioutil.ReadAll(resp.Body)
 
-		resp, err := http.Post(url, "application/json", body)
-
-		if err != nil {
-			return err
-		} else {
-			defer resp.Body.Close()
-			if repl != nil {
-
-				content, err := ioutil.ReadAll(resp.Body)
-
+			if err != nil {
+				return err
+			} else {
+				err := json.Unmarshal(content, repl)
 				if err != nil {
 					return err
-				} else {
-					err := json.Unmarshal(content, repl)
-					if err != nil {
-						return err
-					}
 				}
 			}
 		}
 	}
+
 	return nil
 }
